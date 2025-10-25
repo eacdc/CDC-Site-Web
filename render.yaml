@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: cdc-web-app
+    env: static
+    buildCommand: ""
+    staticPublishPath: .
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
+      - path: /styles.css
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /script.js
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+

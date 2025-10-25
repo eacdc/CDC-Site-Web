@@ -313,7 +313,7 @@
     
     try {
       const data = await apiRequest(
-        `process/pending?userId=${state.currentUserId}&machineId=${state.selectedMachine.MachineID}&jobCardContentNo=${encodeURIComponent(jobCardNo)}&isManualEntry=${isManualEntry}&database=${state.selectedDatabase}`
+        `processes/pending?UserID=${state.currentUserId}&MachineID=${state.selectedMachine.MachineID}&jobcardcontentno=${encodeURIComponent(jobCardNo)}&isManualEntry=${isManualEntry}&database=${state.selectedDatabase}`
       );
       
       if (data.status === true) {
@@ -502,7 +502,7 @@
     if (isRunning) {
       const processIndex = state.processes.findIndex(p => 
         p.ProcessID === process.ProcessID && 
-        p.JobBookingJobcardContentsID === process.JobBookingJobcardContentsID &&
+        p.JobBookingJobCardContentsID === process.JobBookingJobCardContentsID &&
         p.FormNo === process.FormNo
       );
       return `
@@ -517,7 +517,7 @@
     
     const processIndex = state.processes.findIndex(p => 
       p.ProcessID === process.ProcessID && 
-      p.JobBookingJobcardContentsID === process.JobBookingJobcardContentsID &&
+      p.JobBookingJobCardContentsID === process.JobBookingJobCardContentsID &&
       p.FormNo === process.FormNo
     );
     return `
@@ -537,7 +537,7 @@
   }
 
   function getProcessKey(process) {
-    return `${process.ProcessID}_${process.JobBookingJobcardContentsID}_${process.FormNo}`;
+    return `${process.ProcessID}_${process.JobBookingJobCardContentsID}_${process.FormNo}`;
   }
 
   // Process Actions
@@ -545,15 +545,15 @@
     showLoading();
     
     try {
-      const data = await apiRequest('process/start', {
+      const data = await apiRequest('processes/start', {
         method: 'POST',
         body: JSON.stringify({
-          userId: state.currentUserId,
-          employeeId: state.currentLedgerId,
-          processId: process.ProcessID,
-          jobBookingJobCardContentsId: process.JobBookingJobcardContentsID,
-          machineId: state.selectedMachine.MachineID,
-          jobCardFormNo: process.FormNo,
+          UserID: state.currentUserId,
+          EmployeeID: state.currentLedgerId,
+          ProcessID: process.ProcessID,
+          JobBookingJobCardContentsID: process.JobBookingJobCardContentsID,
+          MachineID: state.selectedMachine.MachineID,
+          JobCardFormNo: process.FormNo,
           database: state.selectedDatabase,
         }),
       });
@@ -586,17 +586,17 @@
     showLoading();
     
     try {
-      const data = await apiRequest('process/complete', {
+      const data = await apiRequest('processes/complete', {
         method: 'POST',
         body: JSON.stringify({
-          userId: state.currentUserId,
-          employeeId: state.currentLedgerId,
-          processId: process.ProcessID,
-          jobBookingJobCardContentsId: process.JobBookingJobcardContentsID,
-          machineId: state.selectedMachine.MachineID,
-          jobCardFormNo: process.FormNo,
-          productionQty: parseInt(productionQty),
-          wastageQty: parseInt(wastageQty),
+          UserID: state.currentUserId,
+          EmployeeID: state.currentLedgerId,
+          ProcessID: process.ProcessID,
+          JobBookingJobCardContentsID: process.JobBookingJobCardContentsID,
+          MachineID: state.selectedMachine.MachineID,
+          JobCardFormNo: process.FormNo,
+          ProductionQty: parseInt(productionQty),
+          WastageQty: parseInt(wastageQty),
           database: state.selectedDatabase,
         }),
       });
@@ -632,15 +632,15 @@
     showLoading();
     
     try {
-      const data = await apiRequest('process/cancel', {
+      const data = await apiRequest('processes/cancel', {
         method: 'POST',
         body: JSON.stringify({
-          userId: state.currentUserId,
-          employeeId: state.currentLedgerId,
-          processId: process.ProcessID,
-          jobBookingJobCardContentsId: process.JobBookingJobcardContentsID,
-          machineId: state.selectedMachine.MachineID,
-          jobCardFormNo: process.FormNo,
+          UserID: state.currentUserId,
+          EmployeeID: state.currentLedgerId,
+          ProcessID: process.ProcessID,
+          JobBookingJobCardContentsID: process.JobBookingJobCardContentsID,
+          MachineID: state.selectedMachine.MachineID,
+          JobCardFormNo: process.FormNo,
           database: state.selectedDatabase,
         }),
       });

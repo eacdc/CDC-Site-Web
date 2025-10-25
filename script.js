@@ -1,0 +1,926 @@
+(function() {
+  'use strict';
+
+  // API Configuration
+  const API_BASE_URL = 'https://cdcapi.onrender.com/api';
+
+  // Set current year in footer
+  const yearElement = document.getElementById('year');
+  if (yearElement) {
+    yearElement.textContent = new Date().getFullYear();
+  }
+
+  // State management
+  const state = {
+    currentUsername: null,
+    currentUserId: null,
+    currentLedgerId: null,
+    selectedDatabase: null,
+    machines: [],
+    selectedMachine: null,
+    processes: [],
+    runningProcesses: new Map(), // processKey -> { startTime, process }
+    currentJobCardNo: null,
+    displayedProcessCount: 10,
+    qrScanner: null,
+  };
+
+  // DOM Elements
+  const elements = {
+    // Sections
+    loginSection: document.getElementById('login-section'),
+    machineSection: document.getElementById('machine-section'),
+    searchSection: document.getElementById('search-section'),
+    processListSection: document.getElementById('process-list-section'),
+    runningProcessSection: document.getElementById('running-process-section'),
+    
+    // Login
+    loginForm: document.getElementById('login-form'),
+    usernameInput: document.getElementById('username'),
+    databaseSelect: document.getElementById('database'),
+    loginError: document.getElementById('login-error'),
+    
+    // Header
+    userInfo: document.getElementById('user-info'),
+    logoutBtn: document.getElementById('btn-logout'),
+    
+    // Machines
+    machinesList: document.getElementById('machines-list'),
+    
+    // Search
+    tabQr: document.getElementById('tab-qr'),
+    tabManual: document.getElementById('tab-manual'),
+    qrScannerContainer: document.getElementById('qr-scanner-container'),
+    manualEntryContainer: document.getElementById('manual-entry-container'),
+    jobCardNoInput: document.getElementById('job-card-no'),
+    searchManualBtn: document.getElementById('btn-search-manual'),
+    selectedMachineName: document.getElementById('selected-machine-name'),
+    backToMachinesBtn: document.getElementById('btn-back-to-machines'),
+    
+    // Process List
+    processMachineName: document.getElementById('process-machine-name'),
+    processJobCard: document.getElementById('process-job-card'),
+    runningProcessesContainer: document.getElementById('running-processes-container'),
+    runningProcessesList: document.getElementById('running-processes-list'),
+    runningCount: document.getElementById('running-count'),
+    pendingProcessesContainer: document.getElementById('pending-processes-container'),
+    pendingProcessesList: document.getElementById('pending-processes-list'),
+    pendingCount: document.getElementById('pending-count'),
+    noProcessesFound: document.getElementById('no-processes-found'),
+    loadMoreContainer: document.getElementById('load-more-container'),
+    loadMoreBtn: document.getElementById('btn-load-more'),
+    backToSearchBtn: document.getElementById('btn-back-to-search'),
+    
+    // Running Process
+    runningProcessDetails: document.getElementById('running-process-details'),
+    backToListBtn: document.getElementById('btn-back-to-list'),
+    
+    // Loading
+    loadingOverlay: document.getElementById('loading-overlay'),
+  };
+
+  // Helper Functions
+  function showLoading() {
+    elements.loadingOverlay?.classList.remove('hidden');
+  }
+
+  function hideLoading() {
+    elements.loadingOverlay?.classList.add('hidden');
+  }
+
+  function showError(message, element = elements.loginError) {
+    if (element) {
+      element.textContent = message;
+    }
+  }
+
+  function clearError(element = elements.loginError) {
+    if (element) {
+      element.textContent = '';
+    }
+  }
+
+  function showSection(section) {
+    // Hide all sections
+    Object.values(elements).forEach(el => {
+      if (el && el.classList && (
+        el.id === 'login-section' ||
+        el.id === 'machine-section' ||
+        el.id === 'search-section' ||
+        el.id === 'process-list-section' ||
+        el.id === 'running-process-section'
+      )) {
+        el.classList.add('hidden');
+      }
+    });
+    
+    // Show target section
+    if (section) {
+      section.classList.remove('hidden');
+    }
+  }
+
+  async function apiRequest(endpoint, options = {}) {
+    const url = `${API_BASE_URL}/${endpoint}`;
+    const config = {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        ...options.headers,
+      },
+      credentials: 'include',
+    };
+
+    try {
+      const response = await fetch(url, config);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || `Request failed with status ${response.status}`);
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('API Request Error:', error);
+      throw error;
+    }
+  }
+
+  // Authentication
+  async function login(username, database) {
+    showLoading();
+    clearError();
+    
+    try {
+      const data = await apiRequest(`auth/login?username=${encodeURIComponent(username)}&database=${encodeURIComponent(database)}&_t=${Date.now()}`);
+      
+      if (data.status === true) {
+        state.currentUsername = username;
+        state.currentUserId = data.userId;
+        state.currentLedgerId = data.ledgerId;
+        state.selectedDatabase = database;
+        state.machines = data.machines || [];
+        
+        updateUserInfo();
+        showMachineSelection();
+        return true;
+      } else {
+        throw new Error(data.error || 'Login failed');
+      }
+    } catch (error) {
+      showError(error.message);
+      return false;
+    } finally {
+      hideLoading();
+    }
+  }
+
+  function updateUserInfo() {
+    if (elements.userInfo) {
+      elements.userInfo.textContent = `${state.currentUsername} (${state.selectedDatabase})`;
+      elements.userInfo.classList.remove('hidden');
+    }
+    if (elements.logoutBtn) {
+      elements.logoutBtn.classList.remove('hidden');
+    }
+  }
+
+  function logout() {
+    state.currentUsername = null;
+    state.currentUserId = null;
+    state.currentLedgerId = null;
+    state.selectedDatabase = null;
+    state.machines = [];
+    state.selectedMachine = null;
+    state.processes = [];
+    state.runningProcesses.clear();
+    state.currentJobCardNo = null;
+    
+    if (elements.userInfo) {
+      elements.userInfo.classList.add('hidden');
+    }
+    if (elements.logoutBtn) {
+      elements.logoutBtn.classList.add('hidden');
+    }
+    
+    stopQrScanner();
+    showSection(elements.loginSection);
+  }
+
+  // Machine Selection
+  function showMachineSelection() {
+    renderMachines();
+    showSection(elements.machineSection);
+  }
+
+  function renderMachines() {
+    if (!elements.machinesList) return;
+    
+    elements.machinesList.innerHTML = state.machines.map(machine => `
+      <div class="machine-card" data-machine-id="${machine.MachineID}">
+        <div class="machine-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/>
+          </svg>
+        </div>
+        <h3>${machine.MachineName}</h3>
+        <span class="machine-id">ID: ${machine.MachineID}</span>
+      </div>
+    `).join('');
+    
+    // Add click handlers
+    elements.machinesList.querySelectorAll('.machine-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const machineId = parseInt(card.dataset.machineId);
+        const machine = state.machines.find(m => m.MachineID === machineId);
+        if (machine) {
+          selectMachine(machine);
+        }
+      });
+    });
+  }
+
+  function selectMachine(machine) {
+    state.selectedMachine = machine;
+    state.processes = [];
+    state.currentJobCardNo = null;
+    state.displayedProcessCount = 10;
+    
+    if (elements.selectedMachineName) {
+      elements.selectedMachineName.textContent = machine.MachineName;
+    }
+    
+    showSearchSection();
+  }
+
+  // Search Section
+  function showSearchSection() {
+    showSection(elements.searchSection);
+    startQrScanner();
+  }
+
+  function startQrScanner() {
+    if (!elements.qrScannerContainer || state.qrScanner) return;
+    
+    try {
+      const qrReader = document.getElementById('qr-reader');
+      if (!qrReader) return;
+      
+      state.qrScanner = new Html5Qrcode("qr-reader");
+      
+      state.qrScanner.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 }
+        },
+        (decodedText) => {
+          handleQrScan(decodedText);
+        },
+        (error) => {
+          // Ignore scan errors
+        }
+      ).catch(err => {
+        console.error('QR Scanner error:', err);
+      });
+    } catch (error) {
+      console.error('Failed to start QR scanner:', error);
+    }
+  }
+
+  function stopQrScanner() {
+    if (state.qrScanner) {
+      state.qrScanner.stop().catch(err => console.error('Error stopping scanner:', err));
+      state.qrScanner = null;
+    }
+  }
+
+  function handleQrScan(jobCardNo) {
+    stopQrScanner();
+    searchProcesses(jobCardNo.trim());
+  }
+
+  // Process Search
+  async function searchProcesses(jobCardNo, isManualEntry = false) {
+    if (!jobCardNo) {
+      alert('Please enter a job card number');
+      return;
+    }
+    
+    state.currentJobCardNo = jobCardNo;
+    showLoading();
+    
+    try {
+      const data = await apiRequest(
+        `process/pending?userId=${state.currentUserId}&machineId=${state.selectedMachine.MachineID}&jobCardContentNo=${encodeURIComponent(jobCardNo)}&isManualEntry=${isManualEntry}&database=${state.selectedDatabase}`
+      );
+      
+      if (data.status === true) {
+        state.processes = data.processes || [];
+        state.displayedProcessCount = 10;
+        showProcessList();
+      } else {
+        throw new Error(data.error || 'Failed to fetch processes');
+      }
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      hideLoading();
+    }
+  }
+
+  // Process List
+  function showProcessList() {
+    if (elements.processMachineName) {
+      elements.processMachineName.textContent = state.selectedMachine.MachineName;
+    }
+    if (elements.processJobCard) {
+      elements.processJobCard.textContent = state.currentJobCardNo;
+    }
+    
+    renderProcessList();
+    showSection(elements.processListSection);
+  }
+
+  function renderProcessList() {
+    const runningProcesses = state.processes.filter(p => 
+      (p.CurrentStatus || '').trim().toLowerCase() === 'running'
+    );
+    const pendingProcesses = state.processes.filter(p => 
+      (p.CurrentStatus || '').trim().toLowerCase() !== 'running'
+    );
+    
+    // Sort pending processes by PWO date (old to new)
+    const sortedPendingProcesses = pendingProcesses.sort((a, b) => {
+      try {
+        const dateA = new Date(a.PWODate);
+        const dateB = new Date(b.PWODate);
+        return dateA - dateB;
+      } catch {
+        return 0;
+      }
+    });
+    
+    const displayedPendingProcesses = sortedPendingProcesses.slice(0, state.displayedProcessCount);
+    
+    // Show/hide containers
+    if (runningProcesses.length > 0) {
+      elements.runningProcessesContainer?.classList.remove('hidden');
+      if (elements.runningCount) elements.runningCount.textContent = runningProcesses.length;
+      renderProcessCards(runningProcesses, elements.runningProcessesList, 0, true);
+    } else {
+      elements.runningProcessesContainer?.classList.add('hidden');
+    }
+    
+    if (sortedPendingProcesses.length > 0) {
+      elements.pendingProcessesContainer?.classList.remove('hidden');
+      if (elements.pendingCount) {
+        elements.pendingCount.textContent = `${displayedPendingProcesses.length} of ${sortedPendingProcesses.length}`;
+      }
+      renderProcessCards(displayedPendingProcesses, elements.pendingProcessesList, runningProcesses.length, false);
+      
+      // Show/hide load more button
+      if (displayedPendingProcesses.length < sortedPendingProcesses.length) {
+        elements.loadMoreContainer?.classList.remove('hidden');
+      } else {
+        elements.loadMoreContainer?.classList.add('hidden');
+      }
+    } else {
+      elements.pendingProcessesContainer?.classList.add('hidden');
+    }
+    
+    if (state.processes.length === 0) {
+      elements.noProcessesFound?.classList.remove('hidden');
+      elements.runningProcessesContainer?.classList.add('hidden');
+      elements.pendingProcessesContainer?.classList.add('hidden');
+    } else {
+      elements.noProcessesFound?.classList.add('hidden');
+    }
+  }
+
+  function renderProcessCards(processes, container, startIndex, isRunning) {
+    if (!container) return;
+    
+    container.innerHTML = processes.map((process, index) => {
+      const isPaperIssued = process.PaperIssuedQty && process.PaperIssuedQty > 0;
+      const formNumber = extractFormNumber(process.FormNo);
+      const processKey = getProcessKey(process);
+      const isProcessRunning = (process.CurrentStatus || '').trim().toLowerCase() === 'running';
+      
+      return `
+        <div class="process-card ${isProcessRunning ? 'running' : ''} ${!isPaperIssued ? 'paper-not-issued' : ''}">
+          <div class="process-header">
+            <div class="process-title">
+              <div class="process-number">${startIndex + index + 1}</div>
+              <div class="process-name">${process.ProcessName}${formNumber ? ` (${formNumber})` : ''}</div>
+            </div>
+            <div class="process-actions">
+              ${renderProcessAction(process, isPaperIssued, isProcessRunning)}
+            </div>
+          </div>
+          <div class="process-details">
+            <div class="detail-item">
+              <svg class="detail-icon" style="color: #3b82f6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/>
+              </svg>
+              <div class="detail-content">
+                <div class="detail-label">Client</div>
+                <div class="detail-value">${process.Client}</div>
+              </div>
+            </div>
+            <div class="detail-item">
+              <svg class="detail-icon" style="color: #22c55e" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/>
+              </svg>
+              <div class="detail-content">
+                <div class="detail-label">Job</div>
+                <div class="detail-value">${process.JobName}</div>
+              </div>
+            </div>
+            <div class="detail-item">
+              <svg class="detail-icon" style="color: #f59e0b" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z"/>
+              </svg>
+              <div class="detail-content">
+                <div class="detail-label">Component</div>
+                <div class="detail-value">${process.ComponentName}</div>
+              </div>
+            </div>
+            <div class="detail-item">
+              <svg class="detail-icon" style="color: #8b5cf6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+              </svg>
+              <div class="detail-content">
+                <div class="detail-label">PWO No</div>
+                <div class="detail-value">${process.PWONo}</div>
+              </div>
+            </div>
+          </div>
+          <div class="process-quantities">
+            <div class="quantity-badge success">
+              <div class="quantity-label">Schedule</div>
+              <div class="quantity-value">${process.ScheduleQty}</div>
+            </div>
+            <div class="quantity-badge warning">
+              <div class="quantity-label">Produced</div>
+              <div class="quantity-value">${process.QtyProduced}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    // Add event listeners
+    container.querySelectorAll('.btn-start').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const index = parseInt(btn.dataset.index);
+        startProcess(processes[index]);
+      });
+    });
+    
+    container.querySelectorAll('.btn-view').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const index = parseInt(btn.dataset.index);
+        viewRunningProcess(processes[index]);
+      });
+    });
+  }
+
+  function renderProcessAction(process, isPaperIssued, isRunning) {
+    if (!isPaperIssued) {
+      return `
+        <button class="btn-action btn-disabled" disabled>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+          </svg>
+          Paper Not Issued
+        </button>
+      `;
+    }
+    
+    if (isRunning) {
+      const processIndex = state.processes.findIndex(p => 
+        p.ProcessID === process.ProcessID && 
+        p.JobBookingJobcardContentsID === process.JobBookingJobcardContentsID &&
+        p.FormNo === process.FormNo
+      );
+      return `
+        <button class="btn-action btn-view" data-index="${processIndex}">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+          </svg>
+          View Status
+        </button>
+      `;
+    }
+    
+    const processIndex = state.processes.findIndex(p => 
+      p.ProcessID === process.ProcessID && 
+      p.JobBookingJobcardContentsID === process.JobBookingJobcardContentsID &&
+      p.FormNo === process.FormNo
+    );
+    return `
+      <button class="btn-action btn-start" data-index="${processIndex}">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M8 5v14l11-7z"/>
+        </svg>
+        Start
+      </button>
+    `;
+  }
+
+  function extractFormNumber(formNo) {
+    if (!formNo) return '';
+    const parts = formNo.split('_');
+    return parts[parts.length - 1] || '';
+  }
+
+  function getProcessKey(process) {
+    return `${process.ProcessID}_${process.JobBookingJobcardContentsID}_${process.FormNo}`;
+  }
+
+  // Process Actions
+  async function startProcess(process) {
+    showLoading();
+    
+    try {
+      const data = await apiRequest('process/start', {
+        method: 'POST',
+        body: JSON.stringify({
+          userId: state.currentUserId,
+          employeeId: state.currentLedgerId,
+          processId: process.ProcessID,
+          jobBookingJobCardContentsId: process.JobBookingJobcardContentsID,
+          machineId: state.selectedMachine.MachineID,
+          jobCardFormNo: process.FormNo,
+          database: state.selectedDatabase,
+        }),
+      });
+      
+      if (data.status === true) {
+        if (data.statusWarning) {
+          alert(`Status Warning: ${data.statusWarning.message}\nStatus: ${data.statusWarning.statusValue}`);
+        } else {
+          // Track start time
+          const processKey = getProcessKey(process);
+          state.runningProcesses.set(processKey, {
+            startTime: new Date(),
+            process: process,
+          });
+          
+          // Navigate to running process screen
+          viewRunningProcess(process);
+        }
+      } else {
+        throw new Error(data.error || 'Failed to start process');
+      }
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      hideLoading();
+    }
+  }
+
+  async function completeProcess(process, productionQty, wastageQty) {
+    showLoading();
+    
+    try {
+      const data = await apiRequest('process/complete', {
+        method: 'POST',
+        body: JSON.stringify({
+          userId: state.currentUserId,
+          employeeId: state.currentLedgerId,
+          processId: process.ProcessID,
+          jobBookingJobCardContentsId: process.JobBookingJobcardContentsID,
+          machineId: state.selectedMachine.MachineID,
+          jobCardFormNo: process.FormNo,
+          productionQty: parseInt(productionQty),
+          wastageQty: parseInt(wastageQty),
+          database: state.selectedDatabase,
+        }),
+      });
+      
+      if (data.status === true) {
+        if (data.statusWarning) {
+          alert(`Status Warning: ${data.statusWarning.message}\nStatus: ${data.statusWarning.statusValue}`);
+        } else {
+          // Remove from running processes
+          const processKey = getProcessKey(process);
+          state.runningProcesses.delete(processKey);
+          
+          alert('Production completed successfully!');
+          
+          // Navigate back to search
+          showSearchSection();
+        }
+      } else {
+        throw new Error(data.error || 'Failed to complete process');
+      }
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      hideLoading();
+    }
+  }
+
+  async function cancelProcess(process) {
+    if (!confirm('Are you sure you want to cancel this process?')) {
+      return;
+    }
+    
+    showLoading();
+    
+    try {
+      const data = await apiRequest('process/cancel', {
+        method: 'POST',
+        body: JSON.stringify({
+          userId: state.currentUserId,
+          employeeId: state.currentLedgerId,
+          processId: process.ProcessID,
+          jobBookingJobCardContentsId: process.JobBookingJobcardContentsID,
+          machineId: state.selectedMachine.MachineID,
+          jobCardFormNo: process.FormNo,
+          database: state.selectedDatabase,
+        }),
+      });
+      
+      if (data.status === true) {
+        if (data.statusWarning) {
+          alert(`Status Warning: ${data.statusWarning.message}\nStatus: ${data.statusWarning.statusValue}`);
+        } else {
+          // Remove from running processes
+          const processKey = getProcessKey(process);
+          state.runningProcesses.delete(processKey);
+          
+          alert('Process cancelled successfully!');
+          
+          // Navigate back to search
+          showSearchSection();
+        }
+      } else {
+        throw new Error(data.error || 'Failed to cancel process');
+      }
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      hideLoading();
+    }
+  }
+
+  // Running Process View
+  function viewRunningProcess(process) {
+    const processKey = getProcessKey(process);
+    let runningInfo = state.runningProcesses.get(processKey);
+    
+    if (!runningInfo) {
+      runningInfo = {
+        startTime: new Date(),
+        process: process,
+      };
+      state.runningProcesses.set(processKey, runningInfo);
+    }
+    
+    renderRunningProcess(process, runningInfo.startTime);
+    showSection(elements.runningProcessSection);
+  }
+
+  function renderRunningProcess(process, startTime) {
+    if (!elements.runningProcessDetails) return;
+    
+    const formNumber = extractFormNumber(process.FormNo);
+    
+    elements.runningProcessDetails.innerHTML = `
+      <div class="process-card running">
+        <div class="process-header">
+          <div class="process-title">
+            <div class="process-number">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+            </div>
+            <div class="process-name">${process.ProcessName}${formNumber ? ` (${formNumber})` : ''}</div>
+          </div>
+          <div class="process-actions">
+            <button class="btn-action btn-danger" id="btn-cancel-process">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/>
+              </svg>
+              Cancel
+            </button>
+            <button class="btn-action btn-success" id="btn-toggle-complete">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
+              </svg>
+              Complete
+            </button>
+          </div>
+        </div>
+        <div class="process-details">
+          <div class="detail-item">
+            <svg class="detail-icon" style="color: #3b82f6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/>
+            </svg>
+            <div class="detail-content">
+              <div class="detail-label">Client</div>
+              <div class="detail-value">${process.Client}</div>
+            </div>
+          </div>
+          <div class="detail-item">
+            <svg class="detail-icon" style="color: #22c55e" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/>
+            </svg>
+            <div class="detail-content">
+              <div class="detail-label">Job</div>
+              <div class="detail-value">${process.JobName}</div>
+            </div>
+          </div>
+          <div class="detail-item">
+            <svg class="detail-icon" style="color: #f59e0b" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z"/>
+            </svg>
+            <div class="detail-content">
+              <div class="detail-label">Component</div>
+              <div class="detail-value">${process.ComponentName}</div>
+            </div>
+          </div>
+          <div class="detail-item">
+            <svg class="detail-icon" style="color: #8b5cf6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+            </svg>
+            <div class="detail-content">
+              <div class="detail-label">PWO No</div>
+              <div class="detail-value">${process.PWONo}</div>
+            </div>
+          </div>
+        </div>
+        <div class="process-quantities">
+          <div class="quantity-badge success">
+            <div class="quantity-label">Schedule</div>
+            <div class="quantity-value">${process.ScheduleQty}</div>
+          </div>
+          <div class="quantity-badge warning">
+            <div class="quantity-label">Produced</div>
+            <div class="quantity-value">${process.QtyProduced}</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="running-details">
+        <div class="timer-container">
+          <svg class="timer-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42C16.07 4.74 14.12 4 12 4c-4.97 0-9 4.03-9 9s4.02 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
+          </svg>
+          <div class="timer-label">Production Time</div>
+          <div class="timer-value" id="timer-display">00:00:00</div>
+        </div>
+        
+        <div class="complete-form hidden" id="complete-form">
+          <h3>Complete Production</h3>
+          <p class="subtitle">Enter production and wastage quantities</p>
+          
+          <form id="complete-production-form">
+            <div class="form-row">
+              <label for="production-qty">Production Qty</label>
+              <input type="number" id="production-qty" min="0" required placeholder="Enter actual produced quantity" />
+            </div>
+            <div class="form-row">
+              <label for="wastage-qty">Wastage Qty</label>
+              <input type="number" id="wastage-qty" min="0" value="0" required placeholder="Enter wastage quantity" />
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn-secondary" id="btn-cancel-form">Cancel</button>
+              <button type="submit" class="btn-success">Submit</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+    
+    // Start timer
+    startTimer(startTime, document.getElementById('timer-display'));
+    
+    // Add event listeners
+    document.getElementById('btn-cancel-process')?.addEventListener('click', () => {
+      cancelProcess(process);
+    });
+    
+    document.getElementById('btn-toggle-complete')?.addEventListener('click', () => {
+      const form = document.getElementById('complete-form');
+      form?.classList.toggle('hidden');
+    });
+    
+    document.getElementById('btn-cancel-form')?.addEventListener('click', () => {
+      const form = document.getElementById('complete-form');
+      form?.classList.add('hidden');
+    });
+    
+    document.getElementById('complete-production-form')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const productionQty = document.getElementById('production-qty').value;
+      const wastageQty = document.getElementById('wastage-qty').value;
+      completeProcess(process, productionQty, wastageQty);
+    });
+  }
+
+  function startTimer(startTime, displayElement) {
+    if (!displayElement) return;
+    
+    function updateTimer() {
+      const now = new Date();
+      const diff = now - startTime;
+      
+      const hours = Math.floor(diff / 3600000);
+      const minutes = Math.floor((diff % 3600000) / 60000);
+      const seconds = Math.floor((diff % 60000) / 1000);
+      
+      displayElement.textContent = 
+        `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+    
+    updateTimer();
+    const timerId = setInterval(updateTimer, 1000);
+    
+    // Store timer ID to clear later if needed
+    displayElement.dataset.timerId = timerId;
+  }
+
+  // Event Listeners
+  if (elements.loginForm) {
+    elements.loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = elements.usernameInput.value.trim();
+      const database = elements.databaseSelect.value;
+      
+      if (!username || !database) {
+        showError('Please enter username and select database');
+        return;
+      }
+      
+      await login(username, database);
+    });
+  }
+
+  if (elements.logoutBtn) {
+    elements.logoutBtn.addEventListener('click', logout);
+  }
+
+  if (elements.backToMachinesBtn) {
+    elements.backToMachinesBtn.addEventListener('click', () => {
+      stopQrScanner();
+      showMachineSelection();
+    });
+  }
+
+  if (elements.tabQr) {
+    elements.tabQr.addEventListener('click', () => {
+      elements.tabQr.classList.add('active');
+      elements.tabManual?.classList.remove('active');
+      elements.qrScannerContainer?.classList.remove('hidden');
+      elements.manualEntryContainer?.classList.add('hidden');
+      startQrScanner();
+    });
+  }
+
+  if (elements.tabManual) {
+    elements.tabManual.addEventListener('click', () => {
+      elements.tabManual.classList.add('active');
+      elements.tabQr?.classList.remove('active');
+      elements.manualEntryContainer?.classList.remove('hidden');
+      elements.qrScannerContainer?.classList.add('hidden');
+      stopQrScanner();
+    });
+  }
+
+  if (elements.searchManualBtn) {
+    elements.searchManualBtn.addEventListener('click', () => {
+      const jobCardNo = elements.jobCardNoInput.value.trim();
+      searchProcesses(jobCardNo, true);
+    });
+  }
+
+  if (elements.backToSearchBtn) {
+    elements.backToSearchBtn.addEventListener('click', () => {
+      showSearchSection();
+    });
+  }
+
+  if (elements.loadMoreBtn) {
+    elements.loadMoreBtn.addEventListener('click', () => {
+      state.displayedProcessCount += 10;
+      renderProcessList();
+    });
+  }
+
+  if (elements.backToListBtn) {
+    elements.backToListBtn.addEventListener('click', () => {
+      // Refresh process list before going back
+      searchProcesses(state.currentJobCardNo);
+    });
+  }
+
+  // Initialize app
+  hideLoading();
+  showSection(elements.loginSection);
+})();
+

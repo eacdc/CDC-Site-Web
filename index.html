@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CDC Process Management</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- QR Code Scanner Library -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <div class="header-content">
+        <div class="header-left">
+          <div class="logo-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/>
+            </svg>
+          </div>
+          <h1 id="app-title">CDC Process Management</h1>
+        </div>
+        <div class="header-right">
+          <span id="user-info" class="user-info hidden"></span>
+          <button id="btn-logout" class="btn-icon hidden" title="Logout">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <!-- Login Section -->
+      <section id="login-section" class="card">
+        <div class="card-header">
+          <h2>Welcome to CDC</h2>
+          <p class="subtitle">Process Management System</p>
+        </div>
+        <form id="login-form">
+          <div class="form-row">
+            <label for="username">Username</label>
+            <input id="username" name="username" type="text" autocomplete="username" required />
+          </div>
+          <div class="form-row">
+            <label for="database">Database</label>
+            <select id="database" name="database" required>
+              <option value="">Select database</option>
+              <option value="KOL">KOL</option>
+              <option value="AHM">AHM</option>
+            </select>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">
+              <span class="btn-text">Sign In</span>
+              <span class="btn-loader hidden"></span>
+            </button>
+          </div>
+          <p id="login-error" class="error" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <!-- Machine Selection Section -->
+      <section id="machine-section" class="hidden">
+        <div class="section-header">
+          <h2>Select Machine</h2>
+          <p class="subtitle">Choose a machine to start production</p>
+        </div>
+        <div id="machines-list" class="machines-grid"></div>
+      </section>
+
+      <!-- Process Search Section -->
+      <section id="search-section" class="card hidden">
+        <div class="card-header">
+          <button id="btn-back-to-machines" class="back-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+            </svg>
+            Back
+          </button>
+          <h2>Search Job Card</h2>
+          <p class="subtitle">Scan QR or enter manually</p>
+        </div>
+        <div class="info-card">
+          <div class="info-row">
+            <span class="info-label">Machine:</span>
+            <span id="selected-machine-name" class="info-value"></span>
+          </div>
+        </div>
+        <div class="search-tabs">
+          <button id="tab-qr" class="tab-btn active">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM13 13h2v2h-2zM15 15h2v2h-2zM13 17h2v2h-2zM15 19h2v2h-2zM17 17h2v2h-2zM17 13h2v2h-2zM19 15h2v2h-2z"/>
+            </svg>
+            QR Scanner
+          </button>
+          <button id="tab-manual" class="tab-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+            </svg>
+            Manual Entry
+          </button>
+        </div>
+        <div id="qr-scanner-container" class="scanner-container">
+          <div id="qr-reader"></div>
+          <p class="scanner-info">Position the QR code within the frame to scan</p>
+        </div>
+        <div id="manual-entry-container" class="manual-entry-container hidden">
+          <div class="form-row">
+            <label for="job-card-no">Job Card Content Number</label>
+            <input id="job-card-no" type="text" placeholder="Enter job card content number" />
+          </div>
+          <div class="form-actions">
+            <button id="btn-search-manual" class="btn-primary">Search</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Process List Section -->
+      <section id="process-list-section" class="hidden">
+        <div class="section-header">
+          <button id="btn-back-to-search" class="back-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+            </svg>
+            Back
+          </button>
+          <h2>Process Details</h2>
+        </div>
+        <div class="info-card">
+          <div class="info-row">
+            <span class="info-label">Machine:</span>
+            <span id="process-machine-name" class="info-value"></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Job Card:</span>
+            <span id="process-job-card" class="info-value"></span>
+          </div>
+        </div>
+        
+        <!-- Running Processes -->
+        <div id="running-processes-container" class="hidden">
+          <div class="list-header">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="header-icon orange">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+            <h3>Running Processes</h3>
+            <span id="running-count" class="count-badge orange">0</span>
+          </div>
+          <div id="running-processes-list" class="processes-list"></div>
+        </div>
+
+        <!-- Pending Processes -->
+        <div id="pending-processes-container" class="hidden">
+          <div class="list-header">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="header-icon blue">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+            <h3>Pending Processes</h3>
+            <span id="pending-count" class="count-badge blue">0</span>
+          </div>
+          <div id="pending-processes-list" class="processes-list"></div>
+          <div id="load-more-container" class="load-more-container hidden">
+            <button id="btn-load-more" class="btn-secondary">Load More</button>
+          </div>
+        </div>
+
+        <!-- No Processes Found -->
+        <div id="no-processes-found" class="empty-state hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+          </svg>
+          <h3>No Processes Found</h3>
+          <p>No pending processes for this job card</p>
+        </div>
+      </section>
+
+      <!-- Running Process Detail Section -->
+      <section id="running-process-section" class="card hidden">
+        <div class="card-header">
+          <button id="btn-back-to-list" class="back-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+            </svg>
+            Back
+          </button>
+          <h2>Running Process</h2>
+        </div>
+        <div id="running-process-details"></div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <small>&copy; <span id="year"></span> CDC. All rights reserved.</small>
+    </footer>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="loading-overlay" class="loading-overlay hidden">
+    <div class="spinner"></div>
+    <p>Loading...</p>
+  </div>
+
+  <script src="script.js" defer></script>
+</body>
+</html>
+

@@ -115,7 +115,8 @@
         el.id === 'machine-section' ||
         el.id === 'search-section' ||
         el.id === 'process-list-section' ||
-        el.id === 'running-process-section'
+        el.id === 'running-process-section' ||
+        el.id === 'running-machines-section'
       )) {
         el.classList.add('hidden');
       }

@@ -769,6 +769,12 @@
       status.MachineStatus && status.MachineStatus.toLowerCase() === 'running'
     );
 
+    // Update running machines count
+    const countElement = document.getElementById('running-machines-count');
+    if (countElement) {
+      countElement.textContent = runningMachines.length;
+    }
+
     if (runningMachines.length === 0) {
       elements.runningMachinesList.classList.add('hidden');
       elements.noRunningMachines.classList.remove('hidden');
@@ -824,7 +830,7 @@
       renderRunningMachines(machineStatuses);
     } catch (error) {
       alert('Error loading running machines: ' + error.message);
-      showMachineSection();
+      showMachineSelection();
     } finally {
       hideLoading();
     }
@@ -1089,7 +1095,7 @@
 
   if (elements.backToMachinesFromRunningBtn) {
     elements.backToMachinesFromRunningBtn.addEventListener('click', () => {
-      showMachineSection();
+      showMachineSelection();
     });
   }
 

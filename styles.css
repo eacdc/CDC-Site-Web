@@ -970,6 +970,19 @@ button {
 }
 
 /* Running Machines Section */
+.running-machines-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.header-title-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .running-machines-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));

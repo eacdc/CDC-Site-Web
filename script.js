@@ -217,25 +217,36 @@
   function renderMachines() {
     if (!elements.machinesList) return;
     
-    elements.machinesList.innerHTML = state.machines.map(machine => `
-      <div class="machine-card" data-machine-id="${machine.MachineID}">
-        <div class="machine-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/>
-          </svg>
+    elements.machinesList.innerHTML = state.machines.map(machine => {
+      // Handle both camelCase and PascalCase
+      const machineId = machine.MachineID || machine.machineId;
+      const machineName = machine.MachineName || machine.machineName;
+      
+      return `
+        <div class="machine-card" data-machine-id="${machineId}">
+          <div class="machine-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/>
+            </svg>
+          </div>
+          <h3>${machineName}</h3>
+          <span class="machine-id">ID: ${machineId}</span>
         </div>
-        <h3>${machine.MachineName}</h3>
-        <span class="machine-id">ID: ${machine.MachineID}</span>
-      </div>
-    `).join('');
+      `;
+    }).join('');
     
     // Add click handlers
     elements.machinesList.querySelectorAll('.machine-card').forEach(card => {
       card.addEventListener('click', () => {
         const machineId = parseInt(card.dataset.machineId);
-        const machine = state.machines.find(m => m.MachineID === machineId);
+        const machine = state.machines.find(m => {
+          const mId = m.MachineID || m.machineId;
+          return mId === machineId;
+        });
         if (machine) {
           selectMachine(machine);
+        } else {
+          console.error('Machine not found:', machineId);
         }
       });
     });
@@ -247,10 +258,14 @@
     state.currentJobCardNo = null;
     state.displayedProcessCount = 10;
     
+    // Handle both camelCase and PascalCase
+    const machineName = machine.MachineName || machine.machineName;
+    
     if (elements.selectedMachineName) {
-      elements.selectedMachineName.textContent = machine.MachineName;
+      elements.selectedMachineName.textContent = machineName;
     }
     
+    console.log('Machine selected:', machineName);
     showSearchSection();
   }
 
@@ -312,8 +327,11 @@
     showLoading();
     
     try {
+      // Handle both camelCase and PascalCase
+      const machineId = state.selectedMachine.MachineID || state.selectedMachine.machineId;
+      
       const data = await apiRequest(
-        `processes/pending?UserID=${state.currentUserId}&MachineID=${state.selectedMachine.MachineID}&jobcardcontentno=${encodeURIComponent(jobCardNo)}&isManualEntry=${isManualEntry}&database=${state.selectedDatabase}`
+        `processes/pending?UserID=${state.currentUserId}&MachineID=${machineId}&jobcardcontentno=${encodeURIComponent(jobCardNo)}&isManualEntry=${isManualEntry}&database=${state.selectedDatabase}`
       );
       
       if (data.status === true) {
@@ -332,8 +350,11 @@
 
   // Process List
   function showProcessList() {
+    // Handle both camelCase and PascalCase
+    const machineName = state.selectedMachine.MachineName || state.selectedMachine.machineName;
+    
     if (elements.processMachineName) {
-      elements.processMachineName.textContent = state.selectedMachine.MachineName;
+      elements.processMachineName.textContent = machineName;
     }
     if (elements.processJobCard) {
       elements.processJobCard.textContent = state.currentJobCardNo;
@@ -344,18 +365,20 @@
   }
 
   function renderProcessList() {
-    const runningProcesses = state.processes.filter(p => 
-      (p.CurrentStatus || '').trim().toLowerCase() === 'running'
-    );
-    const pendingProcesses = state.processes.filter(p => 
-      (p.CurrentStatus || '').trim().toLowerCase() !== 'running'
-    );
+    const runningProcesses = state.processes.filter(p => {
+      const status = p.CurrentStatus || p.currentStatus || '';
+      return status.trim().toLowerCase() === 'running';
+    });
+    const pendingProcesses = state.processes.filter(p => {
+      const status = p.CurrentStatus || p.currentStatus || '';
+      return status.trim().toLowerCase() !== 'running';
+    });
     
     // Sort pending processes by PWO date (old to new)
     const sortedPendingProcesses = pendingProcesses.sort((a, b) => {
       try {
-        const dateA = new Date(a.PWODate);
-        const dateB = new Date(b.PWODate);
+        const dateA = new Date(a.PWODate || a.pwoDate);
+        const dateB = new Date(b.PWODate || b.pwoDate);
         return dateA - dateB;
       } catch {
         return 0;
@@ -403,17 +426,29 @@
     if (!container) return;
     
     container.innerHTML = processes.map((process, index) => {
-      const isPaperIssued = process.PaperIssuedQty && process.PaperIssuedQty > 0;
-      const formNumber = extractFormNumber(process.FormNo);
+      // Handle both camelCase and PascalCase
+      const paperIssuedQty = process.PaperIssuedQty || process.paperIssuedQty;
+      const formNo = process.FormNo || process.formNo;
+      const currentStatus = process.CurrentStatus || process.currentStatus;
+      const processName = process.ProcessName || process.processName;
+      const client = process.Client || process.client;
+      const jobName = process.JobName || process.jobName;
+      const componentName = process.ComponentName || process.componentName;
+      const pwoNo = process.PWONo || process.pwoNo;
+      const scheduleQty = process.ScheduleQty || process.scheduleQty;
+      const qtyProduced = process.QtyProduced || process.qtyProduced;
+      
+      const isPaperIssued = paperIssuedQty && paperIssuedQty > 0;
+      const formNumber = extractFormNumber(formNo);
       const processKey = getProcessKey(process);
-      const isProcessRunning = (process.CurrentStatus || '').trim().toLowerCase() === 'running';
+      const isProcessRunning = (currentStatus || '').trim().toLowerCase() === 'running';
       
       return `
         <div class="process-card ${isProcessRunning ? 'running' : ''} ${!isPaperIssued ? 'paper-not-issued' : ''}">
           <div class="process-header">
             <div class="process-title">
               <div class="process-number">${startIndex + index + 1}</div>
-              <div class="process-name">${process.ProcessName}${formNumber ? ` (${formNumber})` : ''}</div>
+              <div class="process-name">${processName}${formNumber ? ` (${formNumber})` : ''}</div>
             </div>
             <div class="process-actions">
               ${renderProcessAction(process, isPaperIssued, isProcessRunning)}
@@ -426,7 +461,7 @@
               </svg>
               <div class="detail-content">
                 <div class="detail-label">Client</div>
-                <div class="detail-value">${process.Client}</div>
+                <div class="detail-value">${client}</div>
               </div>
             </div>
             <div class="detail-item">
@@ -435,7 +470,7 @@
               </svg>
               <div class="detail-content">
                 <div class="detail-label">Job</div>
-                <div class="detail-value">${process.JobName}</div>
+                <div class="detail-value">${jobName}</div>
               </div>
             </div>
             <div class="detail-item">
@@ -444,7 +479,7 @@
               </svg>
               <div class="detail-content">
                 <div class="detail-label">Component</div>
-                <div class="detail-value">${process.ComponentName}</div>
+                <div class="detail-value">${componentName}</div>
               </div>
             </div>
             <div class="detail-item">
@@ -453,18 +488,18 @@
               </svg>
               <div class="detail-content">
                 <div class="detail-label">PWO No</div>
-                <div class="detail-value">${process.PWONo}</div>
+                <div class="detail-value">${pwoNo}</div>
               </div>
             </div>
           </div>
           <div class="process-quantities">
             <div class="quantity-badge success">
               <div class="quantity-label">Schedule</div>
-              <div class="quantity-value">${process.ScheduleQty}</div>
+              <div class="quantity-value">${scheduleQty}</div>
             </div>
             <div class="quantity-badge warning">
               <div class="quantity-label">Produced</div>
-              <div class="quantity-value">${process.QtyProduced}</div>
+              <div class="quantity-value">${qtyProduced}</div>
             </div>
           </div>
         </div>
@@ -500,11 +535,15 @@
     }
     
     if (isRunning) {
-      const processIndex = state.processes.findIndex(p => 
-        p.ProcessID === process.ProcessID && 
-        p.JobBookingJobCardContentsID === process.JobBookingJobCardContentsID &&
-        p.FormNo === process.FormNo
-      );
+      const processIndex = state.processes.findIndex(p => {
+        const pId = p.ProcessID || p.processId;
+        const pJobId = p.JobBookingJobCardContentsID || p.jobBookingJobCardContentsID || p.jobBookingJobcardContentsId;
+        const pFormNo = p.FormNo || p.formNo;
+        const targetPId = process.ProcessID || process.processId;
+        const targetJobId = process.JobBookingJobCardContentsID || process.jobBookingJobCardContentsID || process.jobBookingJobcardContentsId;
+        const targetFormNo = process.FormNo || process.formNo;
+        return pId === targetPId && pJobId === targetJobId && pFormNo === targetFormNo;
+      });
       return `
         <button class="btn-action btn-view" data-index="${processIndex}">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
@@ -515,11 +554,15 @@
       `;
     }
     
-    const processIndex = state.processes.findIndex(p => 
-      p.ProcessID === process.ProcessID && 
-      p.JobBookingJobCardContentsID === process.JobBookingJobCardContentsID &&
-      p.FormNo === process.FormNo
-    );
+    const processIndex = state.processes.findIndex(p => {
+      const pId = p.ProcessID || p.processId;
+      const pJobId = p.JobBookingJobCardContentsID || p.jobBookingJobCardContentsID || p.jobBookingJobcardContentsId;
+      const pFormNo = p.FormNo || p.formNo;
+      const targetPId = process.ProcessID || process.processId;
+      const targetJobId = process.JobBookingJobCardContentsID || process.jobBookingJobCardContentsID || process.jobBookingJobcardContentsId;
+      const targetFormNo = process.FormNo || process.formNo;
+      return pId === targetPId && pJobId === targetJobId && pFormNo === targetFormNo;
+    });
     return `
       <button class="btn-action btn-start" data-index="${processIndex}">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
@@ -537,7 +580,11 @@
   }
 
   function getProcessKey(process) {
-    return `${process.ProcessID}_${process.JobBookingJobCardContentsID}_${process.FormNo}`;
+    // Handle both camelCase and PascalCase
+    const processId = process.ProcessID || process.processId;
+    const jobBookingId = process.JobBookingJobCardContentsID || process.jobBookingJobCardContentsID || process.jobBookingJobcardContentsId;
+    const formNo = process.FormNo || process.formNo;
+    return `${processId}_${jobBookingId}_${formNo}`;
   }
 
   // Process Actions
@@ -545,15 +592,21 @@
     showLoading();
     
     try {
+      // Handle both camelCase and PascalCase
+      const machineId = state.selectedMachine.MachineID || state.selectedMachine.machineId;
+      const processId = process.ProcessID || process.processId;
+      const jobBookingId = process.JobBookingJobCardContentsID || process.jobBookingJobCardContentsID || process.jobBookingJobcardContentsId;
+      const formNo = process.FormNo || process.formNo;
+      
       const data = await apiRequest('processes/start', {
         method: 'POST',
         body: JSON.stringify({
           UserID: state.currentUserId,
           EmployeeID: state.currentLedgerId,
-          ProcessID: process.ProcessID,
-          JobBookingJobCardContentsID: process.JobBookingJobCardContentsID,
-          MachineID: state.selectedMachine.MachineID,
-          JobCardFormNo: process.FormNo,
+          ProcessID: processId,
+          JobBookingJobCardContentsID: jobBookingId,
+          MachineID: machineId,
+          JobCardFormNo: formNo,
           database: state.selectedDatabase,
         }),
       });
@@ -586,15 +639,21 @@
     showLoading();
     
     try {
+      // Handle both camelCase and PascalCase
+      const machineId = state.selectedMachine.MachineID || state.selectedMachine.machineId;
+      const processId = process.ProcessID || process.processId;
+      const jobBookingId = process.JobBookingJobCardContentsID || process.jobBookingJobCardContentsID || process.jobBookingJobcardContentsId;
+      const formNo = process.FormNo || process.formNo;
+      
       const data = await apiRequest('processes/complete', {
         method: 'POST',
         body: JSON.stringify({
           UserID: state.currentUserId,
           EmployeeID: state.currentLedgerId,
-          ProcessID: process.ProcessID,
-          JobBookingJobCardContentsID: process.JobBookingJobCardContentsID,
-          MachineID: state.selectedMachine.MachineID,
-          JobCardFormNo: process.FormNo,
+          ProcessID: processId,
+          JobBookingJobCardContentsID: jobBookingId,
+          MachineID: machineId,
+          JobCardFormNo: formNo,
           ProductionQty: parseInt(productionQty),
           WastageQty: parseInt(wastageQty),
           database: state.selectedDatabase,
@@ -632,15 +691,21 @@
     showLoading();
     
     try {
+      // Handle both camelCase and PascalCase
+      const machineId = state.selectedMachine.MachineID || state.selectedMachine.machineId;
+      const processId = process.ProcessID || process.processId;
+      const jobBookingId = process.JobBookingJobCardContentsID || process.jobBookingJobCardContentsID || process.jobBookingJobcardContentsId;
+      const formNo = process.FormNo || process.formNo;
+      
       const data = await apiRequest('processes/cancel', {
         method: 'POST',
         body: JSON.stringify({
           UserID: state.currentUserId,
           EmployeeID: state.currentLedgerId,
-          ProcessID: process.ProcessID,
-          JobBookingJobCardContentsID: process.JobBookingJobCardContentsID,
-          MachineID: state.selectedMachine.MachineID,
-          JobCardFormNo: process.FormNo,
+          ProcessID: processId,
+          JobBookingJobCardContentsID: jobBookingId,
+          MachineID: machineId,
+          JobCardFormNo: formNo,
           database: state.selectedDatabase,
         }),
       });

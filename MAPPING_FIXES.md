@@ -123,7 +123,9 @@ After these changes:
 5. ✅ Starting, completing, and canceling processes should work
 
 ## Notes
-- All property names now consistently use PascalCase to match SQL Server stored procedure outputs
+- Backend now returns **BOTH camelCase and PascalCase** properties to support both mobile app and web app
+- Mobile app uses camelCase (e.g., `machineId`, `pwoNo`)
+- Web app uses PascalCase (e.g., `MachineID`, `PWONo`)
 - Endpoint URLs now match backend route definitions
-- The fixes maintain backward compatibility by checking both old and new property names (using `||` operator)
+- This solution ensures **backward compatibility** - both apps work without breaking changes
 

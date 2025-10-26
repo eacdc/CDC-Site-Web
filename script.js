@@ -130,6 +130,11 @@
 
   async function apiRequest(endpoint, options = {}) {
     const url = `${API_BASE_URL}/${endpoint}`;
+    
+    // Create abort controller for timeout (3 minutes for process operations)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutes timeout
+    
     const config = {
       ...options,
       headers: {
@@ -138,10 +143,12 @@
         ...options.headers,
       },
       credentials: 'include',
+      signal: controller.signal,
     };
 
     try {
       const response = await fetch(url, config);
+      clearTimeout(timeoutId);
       const data = await response.json();
       
       if (!response.ok) {
@@ -150,6 +157,10 @@
       
       return data;
     } catch (error) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout - Operation took too long. Please try again.');
+      }
       console.error('API Request Error:', error);
       throw error;
     }

@@ -162,9 +162,6 @@
         state.selectedDatabase = database;
         state.machines = data.machines || [];
         
-        console.log('Login successful. Machines received:', state.machines);
-        console.log('First machine structure:', state.machines[0]);
-        
         updateUserInfo();
         showMachineSelection();
         return true;
@@ -242,22 +239,17 @@
     elements.machinesList.querySelectorAll('.machine-card').forEach(card => {
       card.addEventListener('click', () => {
         const machineId = parseInt(card.dataset.machineId);
-        console.log('Clicked machine ID:', machineId);
-        console.log('Available machines:', state.machines);
-        console.log('Searching for machine with ID:', machineId);
         
         const machine = state.machines.find(m => {
-          const mId = m.MachineID || m.machineId;
-          console.log('Checking machine:', m, 'extracted ID:', mId);
+          // Convert both to numbers for comparison (IDs come as strings from backend)
+          const mId = parseInt(m.MachineID || m.machineId);
           return mId === machineId;
         });
         
         if (machine) {
-          console.log('Machine found:', machine);
           selectMachine(machine);
         } else {
-          console.error('Machine not found:', machineId);
-          console.error('All machines:', JSON.stringify(state.machines, null, 2));
+          console.error('Machine not found:', machineId, 'Available machines:', state.machines);
         }
       });
     });

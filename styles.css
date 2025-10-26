@@ -985,20 +985,24 @@ button {
 
 .running-machines-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: 1fr;
+  gap: 1rem;
   margin-top: 2rem;
   max-width: 1400px;
   margin-left: auto;
   margin-right: auto;
+  padding: 0 1rem;
 }
 
 .running-machine-card {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 1.5rem;
+  padding: 1rem;
   transition: all 0.3s ease;
+  overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .running-machine-card:hover {
@@ -1010,13 +1014,14 @@ button {
 .machine-card-header {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
 }
 
 .machine-icon {
   width: 48px;
   height: 48px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1032,6 +1037,7 @@ button {
 
 .machine-card-info {
   flex: 1;
+  min-width: 0;
 }
 
 .machine-card-info h4 {
@@ -1039,6 +1045,9 @@ button {
   font-weight: 600;
   color: var(--text);
   margin-bottom: 0.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .status-badge {
@@ -1064,17 +1073,111 @@ button {
 .detail-row {
   display: flex;
   gap: 0.5rem;
-  align-items: baseline;
+  align-items: flex-start;
+  overflow: hidden;
 }
 
 .detail-label {
   font-weight: 600;
   color: var(--text-muted);
-  min-width: 120px;
+  min-width: 100px;
+  flex-shrink: 0;
 }
 
 .detail-value {
   color: var(--text);
   flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+}
+
+/* Tablet view for running machines */
+@media (min-width: 769px) {
+  .running-machines-list {
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+  }
+}
+
+/* Mobile optimizations for running machines */
+@media (max-width: 768px) {
+  #running-machines-section {
+    padding: 0;
+  }
+
+  .running-machines-list {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 0 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .running-machine-card {
+    padding: 1rem;
+    margin: 0;
+    max-width: 100%;
+  }
+
+  .machine-card-header {
+    margin-bottom: 1rem;
+    gap: 0.75rem;
+  }
+
+  .machine-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .machine-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .machine-card-info {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .machine-card-info h4 {
+    font-size: 1rem;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+  }
+
+  .detail-row {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .detail-label {
+    min-width: 85px;
+    font-size: 0.8125rem;
+  }
+
+  .detail-value {
+    font-size: 0.8125rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .header-title-group {
+    gap: 0.75rem;
+  }
+
+  .header-title-group h2 {
+    font-size: 1.5rem;
+  }
+
+  .btn-running-machines {
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .btn-running-machines svg {
+    width: 18px;
+    height: 18px;
+  }
 }
 

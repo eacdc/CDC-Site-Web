@@ -33,6 +33,7 @@
     searchSection: document.getElementById('search-section'),
     processListSection: document.getElementById('process-list-section'),
     runningProcessSection: document.getElementById('running-process-section'),
+    runningMachinesSection: document.getElementById('running-machines-section'),
     
     // Login
     loginForm: document.getElementById('login-form'),
@@ -46,6 +47,12 @@
     
     // Machines
     machinesList: document.getElementById('machines-list'),
+    viewRunningMachinesBtn: document.getElementById('btn-view-running-machines'),
+    backToMachinesFromRunningBtn: document.getElementById('btn-back-to-machines-from-running'),
+    
+    // Running Machines
+    runningMachinesList: document.getElementById('running-machines-list'),
+    noRunningMachines: document.getElementById('no-running-machines'),
     
     // Search
     tabQr: document.getElementById('tab-qr'),
@@ -736,6 +743,93 @@
     }
   }
 
+  // Running Machines
+  async function fetchRunningMachines() {
+    try {
+      const data = await apiRequest('machine-status/latest', {
+        method: 'POST',
+        body: JSON.stringify({
+          database: state.selectedDatabase,
+        }),
+      });
+      
+      if (data.status === true) {
+        return data.data || [];
+      } else {
+        throw new Error(data.error || 'Failed to fetch running machines');
+      }
+    } catch (error) {
+      console.error('Error fetching running machines:', error);
+      throw error;
+    }
+  }
+
+  function renderRunningMachines(machineStatuses) {
+    const runningMachines = machineStatuses.filter(status => 
+      status.MachineStatus && status.MachineStatus.toLowerCase() === 'running'
+    );
+
+    if (runningMachines.length === 0) {
+      elements.runningMachinesList.classList.add('hidden');
+      elements.noRunningMachines.classList.remove('hidden');
+      return;
+    }
+
+    elements.runningMachinesList.classList.remove('hidden');
+    elements.noRunningMachines.classList.add('hidden');
+
+    const html = runningMachines.map(status => `
+      <div class="running-machine-card">
+        <div class="machine-card-header">
+          <div class="machine-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/>
+            </svg>
+          </div>
+          <div class="machine-card-info">
+            <h4>${status.MachineNmae || 'Unknown Machine'}</h4>
+            <span class="status-badge running">Running</span>
+          </div>
+        </div>
+        <div class="machine-card-details">
+          <div class="detail-row">
+            <span class="detail-label">Job:</span>
+            <span class="detail-value">${status['Job Name'] || 'N/A'}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Job Number:</span>
+            <span class="detail-value">${status.Jobnumber || 'N/A'}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Process:</span>
+            <span class="detail-value">${status.Process || 'N/A'}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Last Updated:</span>
+            <span class="detail-value">${status.LastUpadted || 'N/A'}</span>
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    elements.runningMachinesList.innerHTML = html;
+  }
+
+  async function showRunningMachinesSection() {
+    showSection(elements.runningMachinesSection);
+    showLoading();
+
+    try {
+      const machineStatuses = await fetchRunningMachines();
+      renderRunningMachines(machineStatuses);
+    } catch (error) {
+      alert('Error loading running machines: ' + error.message);
+      showMachineSection();
+    } finally {
+      hideLoading();
+    }
+  }
+
   // Running Process View
   function viewRunningProcess(process) {
     const processKey = getProcessKey(process);
@@ -984,6 +1078,18 @@
     elements.backToListBtn.addEventListener('click', () => {
       // Refresh process list before going back
       searchProcesses(state.currentJobCardNo);
+    });
+  }
+
+  if (elements.viewRunningMachinesBtn) {
+    elements.viewRunningMachinesBtn.addEventListener('click', () => {
+      showRunningMachinesSection();
+    });
+  }
+
+  if (elements.backToMachinesFromRunningBtn) {
+    elements.backToMachinesFromRunningBtn.addEventListener('click', () => {
+      showMachineSection();
     });
   }
 

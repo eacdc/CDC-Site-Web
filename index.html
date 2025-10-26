@@ -64,10 +64,42 @@
       <!-- Machine Selection Section -->
       <section id="machine-section" class="hidden">
         <div class="section-header">
-          <h2>Select Machine</h2>
-          <p class="subtitle">Choose a machine to start production</p>
+          <div class="section-header-content">
+            <div>
+              <h2>Select Machine</h2>
+              <p class="subtitle">Choose a machine to start production</p>
+            </div>
+            <button id="btn-view-running-machines" class="btn-running-machines" title="View Running Machines">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+              Running Machines
+            </button>
+          </div>
         </div>
         <div id="machines-list" class="machines-grid"></div>
+      </section>
+
+      <!-- Running Machines Section -->
+      <section id="running-machines-section" class="hidden">
+        <div class="section-header">
+          <button id="btn-back-to-machines-from-running" class="back-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+            </svg>
+            Back
+          </button>
+          <h2>Running Machines</h2>
+          <p class="subtitle">View all machines currently in production</p>
+        </div>
+        <div id="running-machines-list" class="running-machines-list"></div>
+        <div id="no-running-machines" class="empty-state hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+          <h3>No Running Machines</h3>
+          <p>All machines are currently idle</p>
+        </div>
       </section>
 
       <!-- Process Search Section -->

@@ -23,6 +23,7 @@
     currentJobCardNo: null,
     displayedProcessCount: 10,
     qrScanner: null,
+    currentScreen: 'login', // Track current screen for history management
   };
 
   // DOM Elements
@@ -107,7 +108,7 @@
     }
   }
 
-  function showSection(section) {
+  function showSection(section, screenName = null) {
     // Hide all sections
     Object.values(elements).forEach(el => {
       if (el && el.classList && (
@@ -125,6 +126,16 @@
     // Show target section
     if (section) {
       section.classList.remove('hidden');
+      
+      // Update current screen state
+      if (screenName) {
+        state.currentScreen = screenName;
+        
+        // Push state to history (except for login which should be initial)
+        if (screenName !== 'login') {
+          history.pushState({ screen: screenName }, '', `#${screenName}`);
+        }
+      }
     }
   }
 
@@ -224,13 +235,16 @@
     }
     
     stopQrScanner();
-    showSection(elements.loginSection);
+    
+    // Clear browser history and go to login
+    history.replaceState({ screen: 'login' }, '', '#login');
+    showSection(elements.loginSection, 'login');
   }
 
   // Machine Selection
   function showMachineSelection() {
     renderMachines();
-    showSection(elements.machineSection);
+    showSection(elements.machineSection, 'machines');
   }
 
   function renderMachines() {
@@ -293,7 +307,7 @@
 
   // Search Section
   function showSearchSection() {
-    showSection(elements.searchSection);
+    showSection(elements.searchSection, 'search');
     startQrScanner();
   }
 
@@ -383,7 +397,7 @@
     }
     
     renderProcessList();
-    showSection(elements.processListSection);
+    showSection(elements.processListSection, 'process-list');
   }
 
   function renderProcessList() {
@@ -899,7 +913,7 @@
   }
 
   async function showRunningMachinesSection() {
-    showSection(elements.runningMachinesSection);
+    showSection(elements.runningMachinesSection, 'running-machines');
     showLoading();
 
     try {
@@ -927,7 +941,7 @@
     }
     
     renderRunningProcess(process, runningInfo.startTime);
-    showSection(elements.runningProcessSection);
+    showSection(elements.runningProcessSection, 'running-process');
   }
 
   function renderRunningProcess(process, startTime) {
@@ -1176,8 +1190,65 @@
     });
   }
 
+  // Browser Navigation Handlers
+  
+  // Handle browser back button
+  window.addEventListener('popstate', (event) => {
+    const targetScreen = event.state?.screen || 'login';
+    
+    // Block back navigation on login and running process screens
+    if (state.currentScreen === 'login' || state.currentScreen === 'running-process') {
+      // Push state back to prevent navigation
+      history.pushState({ screen: state.currentScreen }, '', `#${state.currentScreen}`);
+      
+      if (state.currentScreen === 'running-process') {
+        const confirmed = confirm('You have a process in progress. Are you sure you want to go back? This may affect your current operation.');
+        if (confirmed) {
+          showSearchSection();
+        }
+      }
+      return;
+    }
+    
+    // Navigate to the target screen
+    switch (targetScreen) {
+      case 'machines':
+        showMachineSelection();
+        break;
+      case 'search':
+        showSearchSection();
+        break;
+      case 'process-list':
+        if (state.currentJobCardNo) {
+          // Already have process list data
+          showSection(elements.processListSection, 'process-list');
+        } else {
+          showSearchSection();
+        }
+        break;
+      case 'running-machines':
+        showRunningMachinesSection();
+        break;
+      default:
+        showMachineSelection();
+    }
+  });
+  
+  // Handle page reload/close confirmation
+  window.addEventListener('beforeunload', (event) => {
+    // Show confirmation only on running process screen
+    if (state.currentScreen === 'running-process' || state.runningProcesses.size > 0) {
+      event.preventDefault();
+      event.returnValue = ''; // Required for Chrome
+      return ''; // Required for some browsers
+    }
+  });
+  
+  // Initialize history state
+  history.replaceState({ screen: 'login' }, '', '#login');
+
   // Initialize app
   hideLoading();
-  showSection(elements.loginSection);
+  showSection(elements.loginSection, 'login');
 })();
 

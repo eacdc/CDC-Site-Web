@@ -114,6 +114,8 @@ body {
   color: var(--text-muted);
   cursor: pointer;
   transition: all 0.2s;
+  position: relative;
+  z-index: 101;
 }
 
 .btn-icon:hover {
@@ -300,6 +302,9 @@ button {
   border-radius: 8px;
   font-size: 0.875rem;
   margin-bottom: 1rem;
+  cursor: pointer;
+  position: relative;
+  z-index: 10;
 }
 
 .back-btn:hover {
@@ -876,6 +881,11 @@ button {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  pointer-events: auto;
+}
+
+.loading-overlay.hidden {
+  pointer-events: none;
 }
 
 .spinner {

@@ -689,6 +689,12 @@ button {
   height: 14px;
 }
 
+.btn-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .btn-start {
   background: var(--primary);
   color: white;

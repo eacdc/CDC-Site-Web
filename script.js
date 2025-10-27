@@ -552,8 +552,11 @@
     
     container.querySelectorAll('.btn-view').forEach(btn => {
       btn.addEventListener('click', () => {
+        showLoading();
         const index = parseInt(btn.dataset.index);
         viewRunningProcess(processes[index]);
+        // Hide loading after a brief moment to allow rendering
+        setTimeout(() => hideLoading(), 300);
       });
     });
   }
@@ -1060,13 +1063,36 @@
     startTimer(startTime, document.getElementById('timer-display'));
     
     // Add event listeners
-    document.getElementById('btn-cancel-process')?.addEventListener('click', () => {
-      cancelProcess(process);
+    document.getElementById('btn-cancel-process')?.addEventListener('click', async () => {
+      const cancelBtn = document.getElementById('btn-cancel-process');
+      if (cancelBtn) {
+        cancelBtn.disabled = true;
+        const originalText = cancelBtn.innerHTML;
+        cancelBtn.textContent = 'Cancelling...';
+        
+        await cancelProcess(process);
+        
+        // Re-enable button if still on same screen
+        if (cancelBtn) {
+          cancelBtn.disabled = false;
+          cancelBtn.innerHTML = originalText;
+        }
+      } else {
+        await cancelProcess(process);
+      }
     });
     
     document.getElementById('btn-toggle-complete')?.addEventListener('click', () => {
       const form = document.getElementById('complete-form');
+      const isHidden = form?.classList.contains('hidden');
       form?.classList.toggle('hidden');
+      
+      // Auto-scroll to form when it opens
+      if (isHidden) {
+        setTimeout(() => {
+          form?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
+      }
     });
     
     document.getElementById('btn-cancel-form')?.addEventListener('click', () => {
@@ -1074,11 +1100,25 @@
       form?.classList.add('hidden');
     });
     
-    document.getElementById('complete-production-form')?.addEventListener('submit', (e) => {
+    document.getElementById('complete-production-form')?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const productionQty = document.getElementById('production-qty').value;
       const wastageQty = document.getElementById('wastage-qty').value;
-      completeProcess(process, productionQty, wastageQty);
+      
+      // Disable submit button to prevent double-click
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Completing...';
+      }
+      
+      await completeProcess(process, productionQty, wastageQty);
+      
+      // Re-enable button if still on same screen
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit';
+      }
     });
   }
 

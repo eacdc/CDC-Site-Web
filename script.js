@@ -609,6 +609,47 @@
     return `${processId}_${jobBookingId}_${formNo}`;
   }
 
+  // Helper function to poll job status
+  async function pollJobStatus(jobId, maxAttempts = 60) {
+    // Poll every 3 seconds for up to 3 minutes
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        const response = await apiRequest(`jobs/${jobId}/status`);
+        
+        if (response.status && response.job) {
+          const job = response.job;
+          
+          // Update loading message
+          const messages = {
+            'pending': 'Waiting to process...',
+            'processing': 'Processing... Please wait...',
+            'completed': 'Completed!',
+            'failed': 'Failed'
+          };
+          
+          const loadingMessage = document.querySelector('#loading-overlay p');
+          if (loadingMessage && messages[job.status]) {
+            loadingMessage.textContent = messages[job.status];
+          }
+          
+          // Check if job is done
+          if (job.status === 'completed' || job.status === 'failed') {
+            return job;
+          }
+        }
+        
+        // Wait 3 seconds before next poll
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+      } catch (error) {
+        console.error('Polling error:', error);
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      }
+    }
+    
+    throw new Error('Job timeout - Operation took longer than expected. Please try again.');
+  }
+
   // Process Actions
   async function startProcess(process) {
     showLoading();
@@ -620,7 +661,8 @@
       const jobBookingId = process.JobBookingJobCardContentsID || process.jobBookingJobCardContentsID || process.jobBookingJobcardContentsId;
       const formNo = process.FormNo || process.formNo;
       
-      const data = await apiRequest('processes/start', {
+      // Step 1: Create async job
+      const data = await apiRequest('processes/start-async', {
         method: 'POST',
         body: JSON.stringify({
           UserID: state.currentUserId,
@@ -633,9 +675,16 @@
         }),
       });
       
-      if (data.status === true) {
-        if (data.statusWarning) {
-          alert(`Status Warning: ${data.statusWarning.message}\nStatus: ${data.statusWarning.statusValue}`);
+      if (!data.status || !data.jobId) {
+        throw new Error(data.error || 'Failed to create job');
+      }
+      
+      // Step 2: Poll for job completion
+      const job = await pollJobStatus(data.jobId);
+      
+      if (job.status === 'completed') {
+        if (job.statusWarning) {
+          alert(`Status Warning: ${job.statusWarning.message}\nStatus: ${job.statusWarning.statusValue}`);
         } else {
           // Track start time
           const processKey = getProcessKey(process);
@@ -647,11 +696,11 @@
           // Navigate to running process screen
           viewRunningProcess(process);
         }
-      } else {
-        throw new Error(data.error || 'Failed to start process');
+      } else if (job.status === 'failed') {
+        throw new Error(job.error || 'Failed to start process');
       }
     } catch (error) {
-      alert(error.message);
+      alert('Error: ' + error.message);
     } finally {
       hideLoading();
     }
@@ -667,7 +716,8 @@
       const jobBookingId = process.JobBookingJobCardContentsID || process.jobBookingJobCardContentsID || process.jobBookingJobcardContentsId;
       const formNo = process.FormNo || process.formNo;
       
-      const data = await apiRequest('processes/complete', {
+      // Step 1: Create async job
+      const data = await apiRequest('processes/complete-async', {
         method: 'POST',
         body: JSON.stringify({
           UserID: state.currentUserId,
@@ -682,9 +732,16 @@
         }),
       });
       
-      if (data.status === true) {
-        if (data.statusWarning) {
-          alert(`Status Warning: ${data.statusWarning.message}\nStatus: ${data.statusWarning.statusValue}`);
+      if (!data.status || !data.jobId) {
+        throw new Error(data.error || 'Failed to create job');
+      }
+      
+      // Step 2: Poll for job completion
+      const job = await pollJobStatus(data.jobId);
+      
+      if (job.status === 'completed') {
+        if (job.statusWarning) {
+          alert(`Status Warning: ${job.statusWarning.message}\nStatus: ${job.statusWarning.statusValue}`);
         } else {
           // Remove from running processes
           const processKey = getProcessKey(process);
@@ -695,11 +752,11 @@
           // Navigate back to search
           showSearchSection();
         }
-      } else {
-        throw new Error(data.error || 'Failed to complete process');
+      } else if (job.status === 'failed') {
+        throw new Error(job.error || 'Failed to complete process');
       }
     } catch (error) {
-      alert(error.message);
+      alert('Error: ' + error.message);
     } finally {
       hideLoading();
     }
@@ -719,7 +776,8 @@
       const jobBookingId = process.JobBookingJobCardContentsID || process.jobBookingJobCardContentsID || process.jobBookingJobcardContentsId;
       const formNo = process.FormNo || process.formNo;
       
-      const data = await apiRequest('processes/cancel', {
+      // Step 1: Create async job
+      const data = await apiRequest('processes/cancel-async', {
         method: 'POST',
         body: JSON.stringify({
           UserID: state.currentUserId,
@@ -732,9 +790,16 @@
         }),
       });
       
-      if (data.status === true) {
-        if (data.statusWarning) {
-          alert(`Status Warning: ${data.statusWarning.message}\nStatus: ${data.statusWarning.statusValue}`);
+      if (!data.status || !data.jobId) {
+        throw new Error(data.error || 'Failed to create job');
+      }
+      
+      // Step 2: Poll for job completion
+      const job = await pollJobStatus(data.jobId);
+      
+      if (job.status === 'completed') {
+        if (job.statusWarning) {
+          alert(`Status Warning: ${job.statusWarning.message}\nStatus: ${job.statusWarning.statusValue}`);
         } else {
           // Remove from running processes
           const processKey = getProcessKey(process);
@@ -745,11 +810,11 @@
           // Navigate back to search
           showSearchSection();
         }
-      } else {
-        throw new Error(data.error || 'Failed to cancel process');
+      } else if (job.status === 'failed') {
+        throw new Error(job.error || 'Failed to cancel process');
       }
     } catch (error) {
-      alert(error.message);
+      alert('Error: ' + error.message);
     } finally {
       hideLoading();
     }

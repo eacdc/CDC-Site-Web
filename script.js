@@ -81,7 +81,6 @@
     
     // Running Process
     runningProcessDetails: document.getElementById('running-process-details'),
-    backToListBtn: document.getElementById('btn-back-to-list'),
     
     // Loading
     loadingOverlay: document.getElementById('loading-overlay'),
@@ -134,6 +133,18 @@
         // Push state to history (except for login which should be initial)
         if (screenName !== 'login') {
           history.pushState({ screen: screenName }, '', `#${screenName}`);
+        }
+      }
+      
+      // Hide logout button on running process screen, show on other screens
+      if (screenName === 'running-process') {
+        if (elements.logoutBtn) {
+          elements.logoutBtn.classList.add('hidden');
+        }
+      } else if (screenName !== 'login') {
+        // Show logout button for all screens except login and running-process
+        if (elements.logoutBtn) {
+          elements.logoutBtn.classList.remove('hidden');
         }
       }
     }
@@ -552,11 +563,27 @@
     
     container.querySelectorAll('.btn-view').forEach(btn => {
       btn.addEventListener('click', () => {
-        showLoading();
-        const index = parseInt(btn.dataset.index);
-        viewRunningProcess(processes[index]);
-        // Hide loading after a brief moment to allow rendering
-        setTimeout(() => hideLoading(), 300);
+        try {
+          showLoading();
+          const index = parseInt(btn.dataset.index);
+          const process = processes[index];
+          
+          if (!process) {
+            console.error('Process not found at index:', index);
+            alert('Error: Process not found');
+            hideLoading();
+            return;
+          }
+          
+          console.log('Viewing process:', process);
+          viewRunningProcess(process);
+          // Hide loading after a brief moment to allow rendering
+          setTimeout(() => hideLoading(), 300);
+        } catch (error) {
+          console.error('Error viewing process:', error);
+          alert('Error viewing process: ' + error.message);
+          hideLoading();
+        }
       });
     });
   }
@@ -932,25 +959,72 @@
 
   // Running Process View
   function viewRunningProcess(process) {
-    const processKey = getProcessKey(process);
-    let runningInfo = state.runningProcesses.get(processKey);
-    
-    if (!runningInfo) {
-      runningInfo = {
-        startTime: new Date(),
-        process: process,
-      };
-      state.runningProcesses.set(processKey, runningInfo);
+    try {
+      console.log('viewRunningProcess called with:', process);
+      
+      if (!process) {
+        throw new Error('Process is undefined');
+      }
+      
+      if (!elements.runningProcessSection) {
+        throw new Error('Running process section element not found');
+      }
+      
+      const processKey = getProcessKey(process);
+      console.log('Process key:', processKey);
+      
+      let runningInfo = state.runningProcesses.get(processKey);
+      
+      if (!runningInfo) {
+        runningInfo = {
+          startTime: new Date(),
+          process: process,
+        };
+        state.runningProcesses.set(processKey, runningInfo);
+      }
+      
+      console.log('Running info:', runningInfo);
+      
+      renderRunningProcess(process, runningInfo.startTime);
+      showSection(elements.runningProcessSection, 'running-process');
+      
+      console.log('viewRunningProcess completed successfully');
+    } catch (error) {
+      console.error('Error in viewRunningProcess:', error);
+      throw error;
     }
-    
-    renderRunningProcess(process, runningInfo.startTime);
-    showSection(elements.runningProcessSection, 'running-process');
   }
 
   function renderRunningProcess(process, startTime) {
-    if (!elements.runningProcessDetails) return;
+    console.log('renderRunningProcess called');
     
-    const formNumber = extractFormNumber(process.FormNo);
+    if (!elements.runningProcessDetails) {
+      console.error('runningProcessDetails element not found');
+      throw new Error('Running process details element not found');
+    }
+    
+    // Handle both camelCase and PascalCase for all properties
+    const processName = process.ProcessName || process.processName || 'Unknown Process';
+    const formNo = process.FormNo || process.formNo || '';
+    const client = process.Client || process.client || 'N/A';
+    const jobName = process.JobName || process.jobName || 'N/A';
+    const componentName = process.ComponentName || process.componentName || 'N/A';
+    const pwoNo = process.PWONo || process.pwoNo || 'N/A';
+    const scheduleQty = process.ScheduleQty || process.scheduleQty || 0;
+    const qtyProduced = process.QtyProduced || process.qtyProduced || 0;
+    
+    const formNumber = extractFormNumber(formNo);
+    
+    console.log('Process details:', {
+      processName,
+      formNo,
+      client,
+      jobName,
+      componentName,
+      pwoNo,
+      scheduleQty,
+      qtyProduced
+    });
     
     elements.runningProcessDetails.innerHTML = `
       <div class="process-card running">
@@ -961,7 +1035,7 @@
                 <path d="M8 5v14l11-7z"/>
               </svg>
             </div>
-            <div class="process-name">${process.ProcessName}${formNumber ? ` (${formNumber})` : ''}</div>
+            <div class="process-name">${processName}${formNumber ? ` (${formNumber})` : ''}</div>
           </div>
           <div class="process-actions">
             <button class="btn-action btn-danger" id="btn-cancel-process">
@@ -985,7 +1059,7 @@
             </svg>
             <div class="detail-content">
               <div class="detail-label">Client</div>
-              <div class="detail-value">${process.Client}</div>
+              <div class="detail-value">${client}</div>
             </div>
           </div>
           <div class="detail-item">
@@ -994,7 +1068,7 @@
             </svg>
             <div class="detail-content">
               <div class="detail-label">Job</div>
-              <div class="detail-value">${process.JobName}</div>
+              <div class="detail-value">${jobName}</div>
             </div>
           </div>
           <div class="detail-item">
@@ -1003,7 +1077,7 @@
             </svg>
             <div class="detail-content">
               <div class="detail-label">Component</div>
-              <div class="detail-value">${process.ComponentName}</div>
+              <div class="detail-value">${componentName}</div>
             </div>
           </div>
           <div class="detail-item">
@@ -1012,18 +1086,18 @@
             </svg>
             <div class="detail-content">
               <div class="detail-label">PWO No</div>
-              <div class="detail-value">${process.PWONo}</div>
+              <div class="detail-value">${pwoNo}</div>
             </div>
           </div>
         </div>
         <div class="process-quantities">
           <div class="quantity-badge success">
             <div class="quantity-label">Schedule</div>
-            <div class="quantity-value">${process.ScheduleQty}</div>
+            <div class="quantity-value">${scheduleQty}</div>
           </div>
           <div class="quantity-badge warning">
             <div class="quantity-label">Produced</div>
-            <div class="quantity-value">${process.QtyProduced}</div>
+            <div class="quantity-value">${qtyProduced}</div>
           </div>
         </div>
       </div>
@@ -1208,13 +1282,6 @@
     elements.loadMoreBtn.addEventListener('click', () => {
       state.displayedProcessCount += 10;
       renderProcessList();
-    });
-  }
-
-  if (elements.backToListBtn) {
-    elements.backToListBtn.addEventListener('click', () => {
-      // Refresh process list before going back
-      searchProcesses(state.currentJobCardNo);
     });
   }
 

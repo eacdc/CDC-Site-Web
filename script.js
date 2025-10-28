@@ -923,12 +923,12 @@
       
       // Check if user has permission to view this machine's status
       const machineId = status.MachineID;
-      const userId = status.UserID;
+      const employeeId = status.EmployeeID;
       
       console.log('Step 1: Extract IDs from status');
       console.log('  - MachineID from status:', machineId, '(type:', typeof machineId + ')');
-      console.log('  - UserID from status:', userId, '(type:', typeof userId + ')');
-      console.log('  - Logged-in UserId:', state.currentUserId, '(type:', typeof state.currentUserId + ')');
+      console.log('  - EmployeeID from status:', employeeId, '(type:', typeof employeeId + ')');
+      console.log('  - Logged-in LedgerId:', state.currentLedgerId, '(type:', typeof state.currentLedgerId + ')');
       
       // Check if the machine belongs to the logged-in user's machine list
       console.log('\nStep 2: Check if machine is in user\'s machine list');
@@ -943,16 +943,16 @@
       
       console.log('  - Result: isMachineInUserList =', isMachineInUserList);
       
-      // Check if the user running this process is the logged-in user
-      console.log('\nStep 3: Check if user matches');
-      console.log('  - Comparing:', parseInt(userId), '===', parseInt(state.currentUserId));
-      const isUserMatch = parseInt(userId) === parseInt(state.currentUserId);
-      console.log('  - Result: isUserMatch =', isUserMatch);
+      // Check if the employee running this process is the logged-in user (by LedgerId)
+      console.log('\nStep 3: Check if employee matches logged-in user\'s ledger');
+      console.log('  - Comparing EmployeeID:', parseInt(employeeId), '=== LedgerId:', parseInt(state.currentLedgerId));
+      const isEmployeeMatch = parseInt(employeeId) === parseInt(state.currentLedgerId);
+      console.log('  - Result: isEmployeeMatch =', isEmployeeMatch);
       
       // Enable button only if both conditions are met
-      const canViewStatus = isMachineInUserList && isUserMatch;
+      const canViewStatus = isMachineInUserList && isEmployeeMatch;
       console.log('\nStep 4: Final result');
-      console.log('  - canViewStatus =', canViewStatus, '(isMachineInUserList:', isMachineInUserList, '&& isUserMatch:', isUserMatch + ')');
+      console.log('  - canViewStatus =', canViewStatus, '(isMachineInUserList:', isMachineInUserList, '&& isEmployeeMatch:', isEmployeeMatch + ')');
       console.log('=== End check ===\n');
       
       return `

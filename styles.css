@@ -1108,6 +1108,52 @@ button {
   word-break: break-word;
 }
 
+.machine-card-actions {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.btn-view-machine-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-view-machine-status svg {
+  width: 18px;
+  height: 18px;
+}
+
+.btn-view-machine-status:hover:not(.btn-disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-view-machine-status.btn-disabled {
+  background: var(--border);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-view-machine-status.btn-disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
 /* Tablet view for running machines */
 @media (min-width: 769px) {
   .running-machines-list {

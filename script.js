@@ -917,8 +917,25 @@
     elements.runningMachinesList.classList.remove('hidden');
     elements.noRunningMachines.classList.add('hidden');
 
-    const html = runningMachines.map(status => `
-      <div class="running-machine-card">
+    const html = runningMachines.map((status, index) => {
+      // Check if user has permission to view this machine's status
+      const machineId = status.MachineID;
+      const userId = status.UserID;
+      
+      // Check if the machine belongs to the logged-in user's machine list
+      const isMachineInUserList = state.machines.some(m => {
+        const mId = parseInt(m.MachineID || m.machineId);
+        return mId === parseInt(machineId);
+      });
+      
+      // Check if the user running this process is the logged-in user
+      const isUserMatch = parseInt(userId) === parseInt(state.currentUserId);
+      
+      // Enable button only if both conditions are met
+      const canViewStatus = isMachineInUserList && isUserMatch;
+      
+      return `
+      <div class="running-machine-card" data-index="${index}">
         <div class="machine-card-header">
           <div class="machine-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
@@ -926,14 +943,14 @@
             </svg>
           </div>
           <div class="machine-card-info">
-            <h4>${status.MachineNmae || 'Unknown Machine'}</h4>
+            <h4>${status.MachineNmae || status.MachineName || 'Unknown Machine'}</h4>
             <span class="status-badge running">Running</span>
           </div>
         </div>
         <div class="machine-card-details">
           <div class="detail-row">
             <span class="detail-label">Job:</span>
-            <span class="detail-value">${status['Job Name'] || 'N/A'}</span>
+            <span class="detail-value">${status['Job Name'] || status.JobName || 'N/A'}</span>
           </div>
           <div class="detail-row">
             <span class="detail-label">Job Number:</span>
@@ -945,13 +962,40 @@
           </div>
           <div class="detail-row">
             <span class="detail-label">Last Updated:</span>
-            <span class="detail-value">${status.LastUpadted || 'N/A'}</span>
+            <span class="detail-value">${status.LastUpadted || status.LastUpdated || 'N/A'}</span>
           </div>
         </div>
+        <div class="machine-card-actions">
+          <button class="btn-action btn-view-machine-status ${!canViewStatus ? 'btn-disabled' : ''}" 
+                  data-machine-index="${index}" 
+                  ${!canViewStatus ? 'disabled' : ''}>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+            </svg>
+            View Status
+          </button>
+        </div>
       </div>
-    `).join('');
+      `;
+    }).join('');
 
     elements.runningMachinesList.innerHTML = html;
+    
+    // Add event listeners for View Status buttons
+    elements.runningMachinesList.querySelectorAll('.btn-view-machine-status:not(.btn-disabled)').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const index = parseInt(btn.dataset.machineIndex);
+        const machineStatus = runningMachines[index];
+        handleViewMachineStatus(machineStatus);
+      });
+    });
+  }
+  
+  // Placeholder function for viewing machine status - will be implemented later
+  function handleViewMachineStatus(machineStatus) {
+    console.log('View machine status clicked:', machineStatus);
+    // TODO: Implement view machine status functionality
+    alert('View Status functionality will be implemented next!');
   }
 
   async function showRunningMachinesSection() {

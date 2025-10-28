@@ -329,9 +329,9 @@
       const qrReader = document.getElementById('qr-reader');
       if (!qrReader) return;
       
-      state.qrScanner = new Html5Qrcode("qr-reader");
+      const scanner = new Html5Qrcode("qr-reader");
       
-      state.qrScanner.start(
+      scanner.start(
         { facingMode: "environment" },
         {
           fps: 10,
@@ -343,17 +343,27 @@
         (error) => {
           // Ignore scan errors
         }
-      ).catch(err => {
+      ).then(() => {
+        // Scanner started successfully
+        state.qrScanner = scanner;
+      }).catch(err => {
         console.error('QR Scanner error:', err);
+        // Don't set state.qrScanner if it failed to start
+        state.qrScanner = null;
       });
     } catch (error) {
       console.error('Failed to start QR scanner:', error);
+      state.qrScanner = null;
     }
   }
 
   function stopQrScanner() {
     if (state.qrScanner) {
-      state.qrScanner.stop().catch(err => console.error('Error stopping scanner:', err));
+      // Check if scanner is actually running before trying to stop
+      const scannerState = state.qrScanner.getState();
+      if (scannerState === 2) { // 2 = SCANNING state
+        state.qrScanner.stop().catch(err => console.error('Error stopping scanner:', err));
+      }
       state.qrScanner = null;
     }
   }

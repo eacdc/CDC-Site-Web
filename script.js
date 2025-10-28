@@ -742,11 +742,21 @@
         if (job.statusWarning) {
           alert(`Status Warning: ${job.statusWarning.message}\nStatus: ${job.statusWarning.statusValue}`);
         } else {
-          // Track start time
+          // Extract ProductionID from the job result
+          const productionId = job.productionId;
+          
+          if (!productionId) {
+            throw new Error('ProductionID not returned from start operation');
+          }
+          
+          console.log('ProductionID received:', productionId);
+          
+          // Track start time and ProductionID
           const processKey = getProcessKey(process);
           state.runningProcesses.set(processKey, {
             startTime: new Date(),
             process: process,
+            productionId: productionId,  // Store ProductionID for later use
           });
           
           // Navigate to running process screen
@@ -766,22 +776,23 @@
     showLoading();
     
     try {
-      // Handle both camelCase and PascalCase
-      const machineId = state.selectedMachine.MachineID || state.selectedMachine.machineId;
-      const processId = process.ProcessID || process.processId;
-      const jobBookingId = process.JobBookingJobCardContentsID || process.jobBookingJobCardContentsID || process.jobBookingJobcardContentsId;
-      const formNo = process.FormNo || process.formNo;
+      // Get ProductionID from running processes
+      const processKey = getProcessKey(process);
+      const runningInfo = state.runningProcesses.get(processKey);
+      
+      if (!runningInfo || !runningInfo.productionId) {
+        throw new Error('ProductionID not found. Please restart the process.');
+      }
+      
+      const productionId = runningInfo.productionId;
+      console.log('Using ProductionID for complete:', productionId);
       
       // Step 1: Create async job
       const data = await apiRequest('processes/complete-async', {
         method: 'POST',
         body: JSON.stringify({
           UserID: state.currentUserId,
-          EmployeeID: state.currentLedgerId,
-          ProcessID: processId,
-          JobBookingJobCardContentsID: jobBookingId,
-          MachineID: machineId,
-          JobCardFormNo: formNo,
+          ProductionID: productionId,
           ProductionQty: parseInt(productionQty),
           WastageQty: parseInt(wastageQty),
           database: state.selectedDatabase,
@@ -826,22 +837,23 @@
     showLoading();
     
     try {
-      // Handle both camelCase and PascalCase
-      const machineId = state.selectedMachine.MachineID || state.selectedMachine.machineId;
-      const processId = process.ProcessID || process.processId;
-      const jobBookingId = process.JobBookingJobCardContentsID || process.jobBookingJobCardContentsID || process.jobBookingJobcardContentsId;
-      const formNo = process.FormNo || process.formNo;
+      // Get ProductionID from running processes
+      const processKey = getProcessKey(process);
+      const runningInfo = state.runningProcesses.get(processKey);
+      
+      if (!runningInfo || !runningInfo.productionId) {
+        throw new Error('ProductionID not found. Please restart the process.');
+      }
+      
+      const productionId = runningInfo.productionId;
+      console.log('Using ProductionID for cancel:', productionId);
       
       // Step 1: Create async job
       const data = await apiRequest('processes/cancel-async', {
         method: 'POST',
         body: JSON.stringify({
           UserID: state.currentUserId,
-          EmployeeID: state.currentLedgerId,
-          ProcessID: processId,
-          JobBookingJobCardContentsID: jobBookingId,
-          MachineID: machineId,
-          JobCardFormNo: formNo,
+          ProductionID: productionId,
           database: state.selectedDatabase,
         }),
       });

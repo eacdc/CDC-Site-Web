@@ -917,7 +917,38 @@
     elements.runningMachinesList.classList.remove('hidden');
     elements.noRunningMachines.classList.add('hidden');
 
-    const html = runningMachines.map((status, index) => {
+    // Sort running machines:
+    // 1. First by permission (enabled View Status buttons first)
+    // 2. Then by LastUpdated (older to newer)
+    const sortedRunningMachines = runningMachines.sort((a, b) => {
+      // Calculate permissions for both machines
+      const aEmployeeId = a.EmployeeID;
+      const aMachineId = a.MachineID;
+      const aHasMachine = state.machines.some(m => 
+        parseInt(m.MachineID || m.machineId) === parseInt(aMachineId)
+      );
+      const aHasEmployee = parseInt(aEmployeeId) === parseInt(state.currentLedgerId);
+      const aCanView = aHasMachine && aHasEmployee;
+
+      const bEmployeeId = b.EmployeeID;
+      const bMachineId = b.MachineID;
+      const bHasMachine = state.machines.some(m => 
+        parseInt(m.MachineID || m.machineId) === parseInt(bMachineId)
+      );
+      const bHasEmployee = parseInt(bEmployeeId) === parseInt(state.currentLedgerId);
+      const bCanView = bHasMachine && bHasEmployee;
+
+      // First sort by permission (enabled first)
+      if (aCanView && !bCanView) return -1;
+      if (!aCanView && bCanView) return 1;
+
+      // Then sort by LastUpdated (older to newer)
+      const aTime = new Date(a.LastUpadted || a.LastUpdated || 0).getTime();
+      const bTime = new Date(b.LastUpadted || b.LastUpdated || 0).getTime();
+      return aTime - bTime; // older first
+    });
+
+    const html = sortedRunningMachines.map((status, index) => {
       console.log(`\n=== Checking permissions for machine card ${index} ===`);
       console.log('Full status object:', status);
       
@@ -1006,7 +1037,7 @@
     elements.runningMachinesList.querySelectorAll('.btn-view-machine-status:not(.btn-disabled)').forEach(btn => {
       btn.addEventListener('click', () => {
         const index = parseInt(btn.dataset.machineIndex);
-        const machineStatus = runningMachines[index];
+        const machineStatus = sortedRunningMachines[index];
         handleViewMachineStatus(machineStatus);
       });
     });

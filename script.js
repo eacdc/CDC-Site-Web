@@ -918,21 +918,42 @@
     elements.noRunningMachines.classList.add('hidden');
 
     const html = runningMachines.map((status, index) => {
+      console.log(`\n=== Checking permissions for machine card ${index} ===`);
+      console.log('Full status object:', status);
+      
       // Check if user has permission to view this machine's status
       const machineId = status.MachineID;
       const userId = status.UserID;
       
+      console.log('Step 1: Extract IDs from status');
+      console.log('  - MachineID from status:', machineId, '(type:', typeof machineId + ')');
+      console.log('  - UserID from status:', userId, '(type:', typeof userId + ')');
+      console.log('  - Logged-in UserId:', state.currentUserId, '(type:', typeof state.currentUserId + ')');
+      
       // Check if the machine belongs to the logged-in user's machine list
+      console.log('\nStep 2: Check if machine is in user\'s machine list');
+      console.log('  - User\'s machines:', state.machines);
+      
       const isMachineInUserList = state.machines.some(m => {
         const mId = parseInt(m.MachineID || m.machineId);
-        return mId === parseInt(machineId);
+        const statusMId = parseInt(machineId);
+        console.log(`    Comparing: ${mId} === ${statusMId}?`, mId === statusMId);
+        return mId === statusMId;
       });
       
+      console.log('  - Result: isMachineInUserList =', isMachineInUserList);
+      
       // Check if the user running this process is the logged-in user
+      console.log('\nStep 3: Check if user matches');
+      console.log('  - Comparing:', parseInt(userId), '===', parseInt(state.currentUserId));
       const isUserMatch = parseInt(userId) === parseInt(state.currentUserId);
+      console.log('  - Result: isUserMatch =', isUserMatch);
       
       // Enable button only if both conditions are met
       const canViewStatus = isMachineInUserList && isUserMatch;
+      console.log('\nStep 4: Final result');
+      console.log('  - canViewStatus =', canViewStatus, '(isMachineInUserList:', isMachineInUserList, '&& isUserMatch:', isUserMatch + ')');
+      console.log('=== End check ===\n');
       
       return `
       <div class="running-machine-card" data-index="${index}">

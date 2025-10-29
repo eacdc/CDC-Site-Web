@@ -1200,11 +1200,72 @@
     });
   }
   
-  // Placeholder function for viewing machine status - will be implemented later
+  // View machine status from running machines list
   function handleViewMachineStatus(machineStatus) {
     console.log('View machine status clicked:', machineStatus);
-    // TODO: Implement view machine status functionality
-    alert('View Status functionality will be implemented next!');
+    
+    try {
+      // Extract PWO No (everything before first underscore in Jobnumber)
+      const jobNumber = machineStatus.Jobnumber || '';
+      const pwoNo = jobNumber.split('_')[0] || 'N/A';
+      
+      // Map GetLatestMachineStatusPerMachine fields to process format
+      const mappedProcess = {
+        // Process information
+        ProcessName: machineStatus.Process || 'N/A',
+        processName: machineStatus.Process || 'N/A',
+        
+        // Form number is the full job number
+        FormNo: jobNumber,
+        formNo: jobNumber,
+        
+        // Client and Job (both use JobName from the procedure)
+        Client: machineStatus.JobName || 'N/A',
+        client: machineStatus.JobName || 'N/A',
+        JobName: machineStatus.JobName || 'N/A',
+        jobName: machineStatus.JobName || 'N/A',
+        
+        // Component (from ContentName)
+        ComponentName: machineStatus.ContentName || 'N/A',
+        componentName: machineStatus.ContentName || 'N/A',
+        
+        // PWO Number (extracted from Jobnumber)
+        PWONo: pwoNo,
+        pwoNo: pwoNo,
+        
+        // Quantities
+        ScheduleQty: machineStatus.ScheduleQty || 0,
+        scheduleQty: machineStatus.ScheduleQty || 0,
+        QtyProduced: machineStatus.PreviouslyProducedQty || 0,
+        qtyProduced: machineStatus.PreviouslyProducedQty || 0,
+        
+        // Production ID (critical for complete/cancel)
+        RunningProductionID: machineStatus.ProductionID || null,
+        runningProductionID: machineStatus.ProductionID || null,
+        
+        // Status
+        CurrentStatus: machineStatus.MachineStatus || 'Running',
+        currentStatus: machineStatus.MachineStatus || 'Running',
+        
+        // IDs (may not be available from this procedure, but include for compatibility)
+        ProcessID: machineStatus.ProcessID || null,
+        processId: machineStatus.ProcessID || null,
+        JobBookingJobCardContentsID: machineStatus.JobBookingJobCardContentsID || null,
+        jobBookingJobcardContentsId: machineStatus.JobBookingJobCardContentsID || null,
+        MachineID: machineStatus.MachineID || null,
+        machineId: machineStatus.MachineID || null
+      };
+      
+      console.log('Mapped process for running view:', mappedProcess);
+      console.log('ProductionID for complete/cancel:', mappedProcess.RunningProductionID);
+      
+      // Navigate to running process screen
+      viewRunningProcess(mappedProcess);
+      
+    } catch (error) {
+      console.error('Error viewing machine status:', error);
+      alert('Error: ' + error.message);
+    }
   }
 
   async function showRunningMachinesSection() {

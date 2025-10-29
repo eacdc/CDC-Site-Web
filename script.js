@@ -690,7 +690,15 @@
     container.querySelectorAll('.btn-start').forEach(btn => {
       btn.addEventListener('click', () => {
         const index = parseInt(btn.dataset.index);
-        startProcess(processes[index]);
+        // Use state.processes instead of the local processes parameter
+        // because data-index refers to the index in the full state.processes array
+        const process = state.processes[index];
+        if (!process) {
+          console.error('Process not found at index:', index, 'in state.processes');
+          alert('Error: Process not found');
+          return;
+        }
+        startProcess(process);
       });
     });
     

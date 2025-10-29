@@ -442,6 +442,14 @@
   // Search Section
   function showSearchSection() {
     showSection(elements.searchSection, 'search');
+    
+    // Restore machine name if a machine is selected
+    if (state.selectedMachine && elements.selectedMachineName) {
+      const machineName = state.selectedMachine.MachineName || state.selectedMachine.machineName;
+      elements.selectedMachineName.textContent = machineName;
+      console.log('Restored machine name:', machineName);
+    }
+    
     startQrScanner();
   }
 
@@ -1205,6 +1213,20 @@
     console.log('View machine status clicked:', machineStatus);
     
     try {
+      // Extract machine information from GetLatestMachineStatusPerMachine
+      const machineId = machineStatus.MachineID;
+      const machineName = machineStatus.MachineNmae || machineStatus.MachineName;
+      
+      // Set the selected machine in state so it appears when navigating back
+      state.selectedMachine = {
+        MachineID: machineId,
+        machineId: machineId,
+        MachineName: machineName,
+        machineName: machineName
+      };
+      
+      console.log('Machine set for navigation:', state.selectedMachine);
+      
       // Extract PWO No (everything before first underscore in Jobnumber)
       const jobNumber = machineStatus.Jobnumber || '';
       const pwoNo = jobNumber.split('_')[0] || 'N/A';

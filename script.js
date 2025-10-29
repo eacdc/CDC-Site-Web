@@ -92,7 +92,14 @@
 
   // Helper Functions
   function showLoading() {
-    elements.loadingOverlay?.classList.remove('hidden');
+    if (elements.loadingOverlay) {
+      elements.loadingOverlay.classList.remove('hidden');
+      // Reset loading message to default
+      const loadingMessage = elements.loadingOverlay.querySelector('p');
+      if (loadingMessage) {
+        loadingMessage.textContent = 'Loading...';
+      }
+    }
   }
 
   function hideLoading() {
@@ -840,22 +847,20 @@
         if (response.status && response.job) {
           const job = response.job;
           
-          // Update loading message
+          // Check if job is done first
+          if (job.status === 'completed' || job.status === 'failed') {
+            return job;
+          }
+          
+          // Update loading message only for pending/processing states
           const messages = {
             'pending': 'Waiting to process...',
-            'processing': 'Processing... Please wait...',
-            'completed': 'Completed!',
-            'failed': 'Failed'
+            'processing': 'Processing... Please wait...'
           };
           
           const loadingMessage = document.querySelector('#loading-overlay p');
           if (loadingMessage && messages[job.status]) {
             loadingMessage.textContent = messages[job.status];
-          }
-          
-          // Check if job is done
-          if (job.status === 'completed' || job.status === 'failed') {
-            return job;
           }
         }
         

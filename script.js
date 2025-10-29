@@ -776,16 +776,23 @@
     showLoading();
     
     try {
-      // Get ProductionID from running processes
+      // Get ProductionID from running processes or from process data
       const processKey = getProcessKey(process);
       const runningInfo = state.runningProcesses.get(processKey);
       
-      if (!runningInfo || !runningInfo.productionId) {
-        throw new Error('ProductionID not found. Please restart the process.');
+      let productionId = runningInfo?.productionId;
+      
+      // If not in memory, try to get from process data (from database)
+      if (!productionId) {
+        productionId = process.RunningProductionID || process.runningProductionID;
       }
       
-      const productionId = runningInfo.productionId;
+      if (!productionId) {
+        throw new Error('ProductionID not found. Please search for the job card again.');
+      }
+      
       console.log('Using ProductionID for complete:', productionId);
+      console.log('ProductionID source:', runningInfo?.productionId ? 'Memory' : 'Database');
       
       // Step 1: Create async job
       const data = await apiRequest('processes/complete-async', {
@@ -837,16 +844,23 @@
     showLoading();
     
     try {
-      // Get ProductionID from running processes
+      // Get ProductionID from running processes or from process data
       const processKey = getProcessKey(process);
       const runningInfo = state.runningProcesses.get(processKey);
       
-      if (!runningInfo || !runningInfo.productionId) {
-        throw new Error('ProductionID not found. Please restart the process.');
+      let productionId = runningInfo?.productionId;
+      
+      // If not in memory, try to get from process data (from database)
+      if (!productionId) {
+        productionId = process.RunningProductionID || process.runningProductionID;
       }
       
-      const productionId = runningInfo.productionId;
+      if (!productionId) {
+        throw new Error('ProductionID not found. Please search for the job card again.');
+      }
+      
       console.log('Using ProductionID for cancel:', productionId);
+      console.log('ProductionID source:', runningInfo?.productionId ? 'Memory' : 'Database');
       
       // Step 1: Create async job
       const data = await apiRequest('processes/cancel-async', {
@@ -1093,17 +1107,26 @@
       const processKey = getProcessKey(process);
       console.log('Process key:', processKey);
       
+      // Extract RunningProductionID from process data (from database)
+      const runningProductionId = process.RunningProductionID || process.runningProductionID;
+      
       let runningInfo = state.runningProcesses.get(processKey);
       
       if (!runningInfo) {
         runningInfo = {
           startTime: new Date(),
           process: process,
+          productionId: runningProductionId, // Store ProductionID from database
         };
+        state.runningProcesses.set(processKey, runningInfo);
+      } else if (runningProductionId && !runningInfo.productionId) {
+        // Update with ProductionID from database if not already set
+        runningInfo.productionId = runningProductionId;
         state.runningProcesses.set(processKey, runningInfo);
       }
       
       console.log('Running info:', runningInfo);
+      console.log('ProductionID from database:', runningProductionId);
       
       renderRunningProcess(process, runningInfo.startTime);
       showSection(elements.runningProcessSection, 'running-process');

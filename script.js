@@ -752,6 +752,19 @@
     }
     
     if (isRunning) {
+      // Check if the running machine ID matches the selected machine ID
+      const runningMachineId = process.RunningMachineID || process.runningMachineID;
+      const selectedMachineId = state.selectedMachine?.MachineID || state.selectedMachine?.machineId;
+      
+      const isMachineMatch = parseInt(runningMachineId) === parseInt(selectedMachineId);
+      
+      console.log('Machine ID check for View Status:', {
+        runningMachineId,
+        selectedMachineId,
+        isMachineMatch,
+        processName: process.ProcessName || process.processName
+      });
+      
       const processIndex = state.processes.findIndex(p => {
         const pId = p.ProcessID || p.processId;
         const pJobId = p.JobBookingJobCardContentsID || p.jobBookingJobCardContentsID || p.jobBookingJobcardContentsId;
@@ -761,6 +774,19 @@
         const targetFormNo = process.FormNo || process.formNo;
         return pId === targetPId && pJobId === targetJobId && pFormNo === targetFormNo;
       });
+      
+      if (!isMachineMatch) {
+        // Show disabled View Status button if machine doesn't match
+        return `
+          <button class="btn-action btn-disabled" disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+            </svg>
+            View Status (Different Machine)
+          </button>
+        `;
+      }
+      
       return `
         <button class="btn-action btn-view" data-index="${processIndex}">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
@@ -1410,15 +1436,6 @@
           </div>
         </div>
         <div class="process-details">
-          <div class="detail-item">
-            <svg class="detail-icon" style="color: #3b82f6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/>
-            </svg>
-            <div class="detail-content">
-              <div class="detail-label">Client</div>
-              <div class="detail-value">${client}</div>
-            </div>
-          </div>
           <div class="detail-item">
             <svg class="detail-icon" style="color: #22c55e" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
               <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/>

@@ -26,6 +26,10 @@
     currentScreen: 'login', // Track current screen for history management
   };
 
+  // Session storage keys
+  const SESSION_KEY = 'cdc_session';
+  const SESSION_ID_KEY = 'cdc_session_id';
+
   // DOM Elements
   const elements = {
     // Sections
@@ -106,6 +110,112 @@
       element.textContent = '';
     }
   }
+
+  // Session Management
+  function saveSession(sessionData) {
+    try {
+      // Generate a unique session ID for this login
+      const sessionId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+      localStorage.setItem(SESSION_ID_KEY, sessionId);
+      console.log('Session saved:', sessionId);
+    } catch (error) {
+      console.error('Error saving session:', error);
+    }
+  }
+
+  function loadSession() {
+    try {
+      const sessionData = localStorage.getItem(SESSION_KEY);
+      if (sessionData) {
+        return JSON.parse(sessionData);
+      }
+    } catch (error) {
+      console.error('Error loading session:', error);
+      clearSession();
+    }
+    return null;
+  }
+
+  function clearSession() {
+    try {
+      localStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem(SESSION_ID_KEY);
+      console.log('Session cleared');
+    } catch (error) {
+      console.error('Error clearing session:', error);
+    }
+  }
+
+  function getSessionId() {
+    return localStorage.getItem(SESSION_ID_KEY);
+  }
+
+  function restoreSession() {
+    const sessionData = loadSession();
+    if (sessionData) {
+      // Restore state from session
+      state.currentUsername = sessionData.username;
+      state.currentUserId = sessionData.userId;
+      state.currentLedgerId = sessionData.ledgerId;
+      state.selectedDatabase = sessionData.database;
+      state.machines = sessionData.machines || [];
+      
+      updateUserInfo();
+      showMachineSelection();
+      console.log('Session restored for user:', sessionData.username);
+      return true;
+    }
+    return false;
+  }
+
+  // Cross-tab session synchronization
+  window.addEventListener('storage', (event) => {
+    // Listen for changes to session storage
+    if (event.key === SESSION_KEY) {
+      if (event.newValue === null) {
+        // Session was cleared (logout)
+        console.log('Session cleared in another tab, logging out...');
+        logout();
+      } else if (event.oldValue !== null) {
+        // Session was updated (new login in another tab)
+        const newSession = JSON.parse(event.newValue);
+        const currentSessionId = getSessionId();
+        const newSessionId = localStorage.getItem(SESSION_ID_KEY);
+        
+        // If session ID changed, it means user logged in from another tab
+        if (currentSessionId && newSessionId && currentSessionId !== newSessionId) {
+          console.log('New login detected in another tab, logging out current session...');
+          // Don't call logout() here as it will trigger another storage event
+          // Just clear local state and show login
+          state.currentUsername = null;
+          state.currentUserId = null;
+          state.currentLedgerId = null;
+          state.selectedDatabase = null;
+          state.machines = [];
+          state.selectedMachine = null;
+          state.processes = [];
+          state.runningProcesses.clear();
+          state.currentJobCardNo = null;
+          
+          if (elements.userInfo) {
+            elements.userInfo.classList.add('hidden');
+          }
+          if (elements.logoutBtn) {
+            elements.logoutBtn.classList.add('hidden');
+          }
+          
+          stopQrScanner();
+          
+          alert('You have been logged out because a new login was detected in another tab.');
+          
+          // Clear browser history and go to login
+          history.replaceState({ screen: 'login' }, '', '#login');
+          showSection(elements.loginSection, 'login');
+        }
+      }
+    }
+  });
 
   function showSection(section, screenName = null) {
     // Hide all sections
@@ -203,6 +313,16 @@
         state.selectedDatabase = database;
         state.machines = data.machines || [];
         
+        // Save session to localStorage
+        const sessionData = {
+          username,
+          userId: data.userId,
+          ledgerId: data.ledgerId,
+          database,
+          machines: data.machines || [],
+        };
+        saveSession(sessionData);
+        
         updateUserInfo();
         showMachineSelection();
         return true;
@@ -246,6 +366,9 @@
     }
     
     stopQrScanner();
+    
+    // Clear session from localStorage
+    clearSession();
     
     // Clear browser history and go to login
     history.replaceState({ screen: 'login' }, '', '#login');
@@ -1499,6 +1622,13 @@
 
   // Initialize app
   hideLoading();
-  showSection(elements.loginSection, 'login');
+  
+  // Try to restore session from localStorage
+  const sessionRestored = restoreSession();
+  
+  // If no session, show login screen
+  if (!sessionRestored) {
+    showSection(elements.loginSection, 'login');
+  }
 })();
 

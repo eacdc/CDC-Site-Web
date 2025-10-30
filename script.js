@@ -1209,6 +1209,10 @@
             <span class="detail-value">${status.Process || 'N/A'}</span>
           </div>
           <div class="detail-row">
+            <span class="detail-label">Operator:</span>
+            <span class="detail-value">${status.EmployeeName || status.Employee || status.UserName || status.Username || 'N/A'}</span>
+          </div>
+          <div class="detail-row">
             <span class="detail-label">Last Updated:</span>
             <span class="detail-value">${status.LastUpadted || status.LastUpdated || 'N/A'}</span>
           </div>

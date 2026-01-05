@@ -208,6 +208,15 @@
     }
   }
 
+  // Show summary in alert/popup
+  function showSummaryPopup(summary) {
+    if (!summary || summary === '-') {
+      alert('No summary available');
+      return;
+    }
+    alert(summary);
+  }
+
   // Render voice notes table
   function renderVoiceNotesTable(voiceNotes) {
     if (!elements.voiceNotesTableBody) return;
@@ -225,7 +234,7 @@
     
     elements.voiceNotesTableBody.innerHTML = '';
     
-    voiceNotes.forEach(note => {
+    voiceNotes.forEach((note, index) => {
       const row = document.createElement('tr');
       
       // Department
@@ -235,9 +244,26 @@
       
       // Audio
       const audioCell = document.createElement('td');
-      const audioElement = createAudioElement(note.audioBlob, note.audioMimeType);
-      if (audioElement) {
-        audioCell.appendChild(audioElement);
+      if (note.audioBlob) {
+        const playBtn = document.createElement('button');
+        playBtn.className = 'btn-play-audio';
+        playBtn.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+        `;
+        playBtn.title = 'Play Audio';
+        
+        playBtn.addEventListener('click', () => {
+          const audioElement = createAudioElement(note.audioBlob, note.audioMimeType);
+          if (audioElement) {
+            playBtn.replaceWith(audioElement);
+          } else {
+            alert('Unable to play audio');
+          }
+        });
+        
+        audioCell.appendChild(playBtn);
       } else {
         audioCell.textContent = '-';
       }
@@ -245,10 +271,26 @@
       
       // Summary
       const summaryCell = document.createElement('td');
-      summaryCell.textContent = note.summary || '-';
-      summaryCell.style.maxWidth = '300px';
-      summaryCell.style.whiteSpace = 'normal';
-      summaryCell.style.wordWrap = 'break-word';
+      const summary = note.summary || '-';
+      
+      if (summary !== '-') {
+        const eyeBtn = document.createElement('button');
+        eyeBtn.className = 'btn-view-summary';
+        eyeBtn.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+          </svg>
+        `;
+        eyeBtn.title = 'View Summary';
+        
+        eyeBtn.addEventListener('click', () => {
+          showSummaryPopup(summary);
+        });
+        
+        summaryCell.appendChild(eyeBtn);
+      } else {
+        summaryCell.textContent = '-';
+      }
       row.appendChild(summaryCell);
       
       // Created By

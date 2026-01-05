@@ -208,6 +208,10 @@
     }
   }
 
+  // Track currently playing audio
+  let currentAudioCell = null;
+  let currentAudioData = null;
+
   // Show summary in alert/popup
   function showSummaryPopup(summary) {
     if (!summary || summary === '-') {
@@ -215,6 +219,60 @@
       return;
     }
     alert(summary);
+  }
+
+  // Convert audio player back to play button
+  function convertAudioToButton(cell, audioBlob, audioMimeType) {
+    const playBtn = document.createElement('button');
+    playBtn.className = 'btn-play-audio';
+    playBtn.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M8 5v14l11-7z"/>
+      </svg>
+    `;
+    playBtn.title = 'Play Audio';
+    
+    playBtn.addEventListener('click', () => {
+      handleAudioPlayClick(cell, audioBlob, audioMimeType);
+    });
+    
+    // Clear the cell and add the button
+    cell.innerHTML = '';
+    cell.appendChild(playBtn);
+  }
+
+  // Handle audio play button click
+  function handleAudioPlayClick(cell, audioBlob, audioMimeType) {
+    // If there's currently an audio player open, convert it back to a button
+    if (currentAudioCell && currentAudioCell !== cell && currentAudioData) {
+      convertAudioToButton(currentAudioCell, currentAudioData.blob, currentAudioData.mimeType);
+    }
+    
+    // Create and play the new audio
+    const audioElement = createAudioElement(audioBlob, audioMimeType);
+    if (audioElement) {
+      // Store current audio info
+      currentAudioCell = cell;
+      currentAudioData = { blob: audioBlob, mimeType: audioMimeType };
+      
+      // Replace button with audio player
+      cell.innerHTML = '';
+      cell.appendChild(audioElement);
+      
+      // Auto-play the audio
+      audioElement.play().catch(err => {
+        console.error('Error playing audio:', err);
+      });
+      
+      // Listen for when audio ends to convert back to button
+      audioElement.addEventListener('ended', () => {
+        convertAudioToButton(cell, audioBlob, audioMimeType);
+        currentAudioCell = null;
+        currentAudioData = null;
+      });
+    } else {
+      alert('Unable to play audio');
+    }
   }
 
   // Render voice notes table
@@ -233,6 +291,10 @@
     elements.voiceNotesTableContainer?.classList.remove('hidden');
     
     elements.voiceNotesTableBody.innerHTML = '';
+    
+    // Reset current audio tracking
+    currentAudioCell = null;
+    currentAudioData = null;
     
     voiceNotes.forEach((note, index) => {
       const row = document.createElement('tr');
@@ -255,12 +317,7 @@
         playBtn.title = 'Play Audio';
         
         playBtn.addEventListener('click', () => {
-          const audioElement = createAudioElement(note.audioBlob, note.audioMimeType);
-          if (audioElement) {
-            playBtn.replaceWith(audioElement);
-          } else {
-            alert('Unable to play audio');
-          }
+          handleAudioPlayClick(audioCell, note.audioBlob, note.audioMimeType);
         });
         
         audioCell.appendChild(playBtn);

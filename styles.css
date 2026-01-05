@@ -1468,5 +1468,88 @@ button {
   width: 20px;
   height: 20px;
 }
+
+/* Voice Notes Grouped Table Styles */
+.voice-notes-group-header {
+  background: rgba(59, 130, 246, 0.1) !important;
+  border-bottom: 2px solid rgba(59, 130, 246, 0.3) !important;
+}
+
+.voice-notes-group-header:hover {
+  background: rgba(59, 130, 246, 0.15) !important;
+}
+
+.group-header-cell {
+  padding: 0 !important;
+}
+
+.group-toggle-btn {
+  width: 100%;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: transparent;
+  border: none;
+  color: var(--text, #e2e8f0);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.group-toggle-btn:hover {
+  color: #60a5fa;
+}
+
+.chevron-icon {
+  width: 20px;
+  height: 20px;
+  color: #60a5fa;
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+}
+
+.chevron-icon.rotated {
+  transform: rotate(-90deg);
+}
+
+.job-number-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #60a5fa;
+  flex-shrink: 0;
+}
+
+.notes-count {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary, #94a3b8);
+  padding: 4px 10px;
+  background: rgba(148, 163, 184, 0.15);
+  border-radius: 12px;
+  margin-left: auto;
+}
+
+.voice-notes-group-content {
+  transition: opacity 0.2s ease;
+}
+
+.voice-notes-group-content.hidden {
+  display: none;
+}
+
+.voice-notes-group-content td {
+  border-left: 3px solid rgba(59, 130, 246, 0.3);
+}
+
+.voice-notes-group-content:first-of-type td {
+  padding-top: 16px;
+}
+
+.voice-notes-group-content:last-of-type td {
+  padding-bottom: 16px;
+}
 }
 

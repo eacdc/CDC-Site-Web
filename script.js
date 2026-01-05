@@ -21,6 +21,7 @@
     processes: [],
     runningProcesses: new Map(), // processKey -> { startTime, process }
     currentJobCardNo: null,
+    uniqueJobNumbers: [], // Store unique job numbers for voice notes
     displayedProcessCount: 10,
     qrScanner: null,
     currentScreen: 'login', // Track current screen for history management
@@ -275,7 +276,151 @@
     }
   }
 
-  // Render voice notes table
+  // Render grouped voice notes table (collapsible by job number)
+  function renderGroupedVoiceNotesTable(voiceNotes) {
+    if (!elements.voiceNotesTableBody) return;
+    
+    elements.voiceNotesLoading?.classList.add('hidden');
+    
+    if (!voiceNotes || voiceNotes.length === 0) {
+      elements.voiceNotesEmpty?.classList.remove('hidden');
+      elements.voiceNotesTableContainer?.classList.add('hidden');
+      return;
+    }
+    
+    elements.voiceNotesEmpty?.classList.add('hidden');
+    elements.voiceNotesTableContainer?.classList.remove('hidden');
+    
+    elements.voiceNotesTableBody.innerHTML = '';
+    
+    // Reset current audio tracking
+    currentAudioCell = null;
+    currentAudioData = null;
+    
+    // Group voice notes by job number
+    const groupedNotes = {};
+    voiceNotes.forEach(note => {
+      const jobNum = note.jobNumber || 'Unknown';
+      if (!groupedNotes[jobNum]) {
+        groupedNotes[jobNum] = [];
+      }
+      groupedNotes[jobNum].push(note);
+    });
+    
+    // Render each group
+    Object.keys(groupedNotes).sort().forEach((jobNumber, groupIndex) => {
+      const notes = groupedNotes[jobNumber];
+      const groupId = `job-group-${groupIndex}`;
+      
+      // Create group header row
+      const headerRow = document.createElement('tr');
+      headerRow.className = 'voice-notes-group-header';
+      headerRow.innerHTML = `
+        <td colspan="5" class="group-header-cell">
+          <button class="group-toggle-btn" data-group-id="${groupId}">
+            <svg class="chevron-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+            </svg>
+            <span class="job-number-label">${jobNumber}</span>
+            <span class="notes-count">${notes.length} recording(s)</span>
+          </button>
+        </td>
+      `;
+      
+      headerRow.addEventListener('click', () => {
+        toggleGroup(groupId);
+      });
+      
+      elements.voiceNotesTableBody.appendChild(headerRow);
+      
+      // Create rows for this group (initially hidden)
+      notes.forEach((note, noteIndex) => {
+        const row = document.createElement('tr');
+        row.className = `voice-notes-group-content ${groupId} hidden`;
+        
+        // Department
+        const deptCell = document.createElement('td');
+        deptCell.textContent = note.department || note.toDepartment || '-';
+        row.appendChild(deptCell);
+        
+        // Audio
+        const audioCell = document.createElement('td');
+        if (note.audioBlob) {
+          const playBtn = document.createElement('button');
+          playBtn.className = 'btn-play-audio';
+          playBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+          `;
+          playBtn.title = 'Play Audio';
+          
+          playBtn.addEventListener('click', () => {
+            handleAudioPlayClick(audioCell, note.audioBlob, note.audioMimeType);
+          });
+          
+          audioCell.appendChild(playBtn);
+        } else {
+          audioCell.textContent = '-';
+        }
+        row.appendChild(audioCell);
+        
+        // Summary
+        const summaryCell = document.createElement('td');
+        const summary = note.summary || '-';
+        
+        if (summary !== '-') {
+          const eyeBtn = document.createElement('button');
+          eyeBtn.className = 'btn-view-summary';
+          eyeBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+            </svg>
+          `;
+          eyeBtn.title = 'View Summary';
+          
+          eyeBtn.addEventListener('click', () => {
+            showSummaryPopup(summary);
+          });
+          
+          summaryCell.appendChild(eyeBtn);
+        } else {
+          summaryCell.textContent = '-';
+        }
+        row.appendChild(summaryCell);
+        
+        // Created By
+        const createdByCell = document.createElement('td');
+        createdByCell.textContent = note.createdBy || '-';
+        row.appendChild(createdByCell);
+        
+        // Created At (IST)
+        const createdAtCell = document.createElement('td');
+        createdAtCell.textContent = formatDateToIST(note.createdAt);
+        row.appendChild(createdAtCell);
+        
+        elements.voiceNotesTableBody.appendChild(row);
+      });
+    });
+  }
+
+  // Toggle group visibility
+  function toggleGroup(groupId) {
+    const groupRows = document.querySelectorAll(`.${groupId}`);
+    const headerBtn = document.querySelector(`[data-group-id="${groupId}"]`);
+    const chevron = headerBtn?.querySelector('.chevron-icon');
+    
+    groupRows.forEach(row => {
+      row.classList.toggle('hidden');
+    });
+    
+    // Rotate chevron
+    if (chevron) {
+      chevron.classList.toggle('rotated');
+    }
+  }
+
+  // Render voice notes table (legacy function - kept for compatibility)
   function renderVoiceNotesTable(voiceNotes) {
     if (!elements.voiceNotesTableBody) return;
     
@@ -366,9 +511,9 @@
 
   // Handle voice notes button click
   async function handleVoiceNotesClick() {
-    const jobNumber = state.currentJobCardNo;
+    const jobNumbers = state.uniqueJobNumbers;
     
-    if (!jobNumber) {
+    if (!jobNumbers || jobNumbers.length === 0) {
       alert('Job number not available');
       return;
     }
@@ -376,7 +521,10 @@
     openVoiceNotesModal();
     
     if (elements.voiceNotesModalTitle) {
-      elements.voiceNotesModalTitle.textContent = `Voice Notes - ${jobNumber}`;
+      const displayText = jobNumbers.length === 1 
+        ? `Voice Notes - ${jobNumbers[0]}` 
+        : `Voice Notes - ${jobNumbers.length} Job(s)`;
+      elements.voiceNotesModalTitle.textContent = displayText;
     }
     
     // Show loading state
@@ -385,8 +533,23 @@
     elements.voiceNotesTableContainer?.classList.add('hidden');
     
     try {
-      const voiceNotes = await fetchVoiceNotes(jobNumber);
-      renderVoiceNotesTable(voiceNotes);
+      // Fetch voice notes for all unique job numbers
+      const allVoiceNotes = [];
+      
+      for (const jobNumber of jobNumbers) {
+        try {
+          const notes = await fetchVoiceNotes(jobNumber);
+          // Add job number to each note
+          notes.forEach(note => {
+            note.jobNumber = jobNumber;
+          });
+          allVoiceNotes.push(...notes);
+        } catch (error) {
+          console.error(`Error fetching voice notes for ${jobNumber}:`, error);
+        }
+      }
+      
+      renderGroupedVoiceNotesTable(allVoiceNotes);
     } catch (error) {
       console.error('Error loading voice notes:', error);
       elements.voiceNotesLoading?.classList.add('hidden');
@@ -809,6 +972,21 @@
       if (data.status === true) {
         state.processes = data.processes || [];
         state.displayedProcessCount = 10;
+        
+        // Extract unique job numbers (part before [)
+        const jobNumbers = new Set();
+        state.processes.forEach(process => {
+          const jobCardNo = process.JobCardContentNo || process.jobcardContentNo || '';
+          if (jobCardNo) {
+            // Extract part before [ if it exists
+            const cleanJobNumber = jobCardNo.split('[')[0].trim();
+            if (cleanJobNumber) {
+              jobNumbers.add(cleanJobNumber);
+            }
+          }
+        });
+        state.uniqueJobNumbers = Array.from(jobNumbers);
+        
         showProcessList();
       } else {
         throw new Error(data.error || 'Failed to fetch processes');

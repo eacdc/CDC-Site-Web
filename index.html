@@ -169,6 +169,7 @@
           <div class="info-row">
             <span class="info-label">Machine:</span>
             <span id="process-machine-name" class="info-value"></span>
+            <button id="btn-voice-notes" class="btn-voice-notes" title="View Voice Notes">?</button>
           </div>
           <div class="info-row">
             <span class="info-label">Job Card:</span>
@@ -231,6 +232,48 @@
   <div id="loading-overlay" class="loading-overlay hidden">
     <div class="spinner"></div>
     <p>Loading...</p>
+  </div>
+
+  <!-- Voice Notes Modal -->
+  <div id="voice-notes-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="voice-notes-modal-title">
+    <div class="modal-content voice-notes-modal-content">
+      <div class="modal-header">
+        <h3 id="voice-notes-modal-title">Voice Notes</h3>
+        <button id="btn-voice-notes-modal-close" class="btn-icon small" title="Close modal">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="voice-notes-loading" class="loading-state hidden">
+          <div class="spinner"></div>
+          <p>Loading voice notes...</p>
+        </div>
+        <div id="voice-notes-empty" class="empty-state hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+          </svg>
+          <h3>No Voice Notes Found</h3>
+          <p>No voice notes available for this job number</p>
+        </div>
+        <div id="voice-notes-table-container" class="table-scroll hidden">
+          <table class="voice-notes-table">
+            <thead>
+              <tr>
+                <th>Department</th>
+                <th>Audio</th>
+                <th>Summary</th>
+                <th>Created By</th>
+                <th>Created At</th>
+              </tr>
+            </thead>
+            <tbody id="voice-notes-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="script.js" defer></script>

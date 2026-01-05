@@ -86,6 +86,16 @@
     // Running Process
     runningProcessDetails: document.getElementById('running-process-details'),
     
+    // Voice Notes Modal
+    voiceNotesBtn: document.getElementById('btn-voice-notes'),
+    voiceNotesModal: document.getElementById('voice-notes-modal'),
+    voiceNotesModalClose: document.getElementById('btn-voice-notes-modal-close'),
+    voiceNotesLoading: document.getElementById('voice-notes-loading'),
+    voiceNotesEmpty: document.getElementById('voice-notes-empty'),
+    voiceNotesTableContainer: document.getElementById('voice-notes-table-container'),
+    voiceNotesTableBody: document.getElementById('voice-notes-table-body'),
+    voiceNotesModalTitle: document.getElementById('voice-notes-modal-title'),
+    
     // Loading
     loadingOverlay: document.getElementById('loading-overlay'),
   };
@@ -115,6 +125,174 @@
   function clearError(element = elements.loginError) {
     if (element) {
       element.textContent = '';
+    }
+  }
+
+  // Voice Notes Functions
+  function closeVoiceNotesModal() {
+    elements.voiceNotesModal?.classList.add('hidden');
+  }
+
+  function openVoiceNotesModal() {
+    if (!elements.voiceNotesModal) return;
+    elements.voiceNotesModal.classList.remove('hidden');
+  }
+
+  // Convert UTC to IST and format
+  function formatDateToIST(dateString) {
+    if (!dateString) return '-';
+    try {
+      const date = new Date(dateString);
+      if (Number.isNaN(date.getTime())) return '-';
+      
+      // Convert to IST (UTC+5:30)
+      const istOffset = 5.5 * 60 * 60 * 1000;
+      const istDate = new Date(date.getTime() + istOffset);
+      
+      // Format as DD-MM-YYYY HH:MM:SS
+      const day = String(istDate.getUTCDate()).padStart(2, '0');
+      const month = String(istDate.getUTCMonth() + 1).padStart(2, '0');
+      const year = istDate.getUTCFullYear();
+      const hours = String(istDate.getUTCHours()).padStart(2, '0');
+      const minutes = String(istDate.getUTCMinutes()).padStart(2, '0');
+      const seconds = String(istDate.getUTCSeconds()).padStart(2, '0');
+      
+      return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return '-';
+    }
+  }
+
+  // Fetch voice notes for a job number
+  async function fetchVoiceNotes(jobNumber) {
+    try {
+      const url = `https://cdcapi.onrender.com/api/voice-note-tool/audio/job/${encodeURIComponent(jobNumber)}/all`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch voice notes: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      console.error('Error fetching voice notes:', error);
+      throw error;
+    }
+  }
+
+  // Create audio element from base64 blob
+  function createAudioElement(audioBlob, mimeType) {
+    if (!audioBlob) return null;
+    
+    try {
+      // Convert base64 to blob
+      const binaryString = atob(audioBlob);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: mimeType || 'audio/wav' });
+      const url = URL.createObjectURL(blob);
+      
+      const audio = document.createElement('audio');
+      audio.controls = true;
+      audio.src = url;
+      audio.preload = 'metadata';
+      
+      return audio;
+    } catch (error) {
+      console.error('Error creating audio element:', error);
+      return null;
+    }
+  }
+
+  // Render voice notes table
+  function renderVoiceNotesTable(voiceNotes) {
+    if (!elements.voiceNotesTableBody) return;
+    
+    elements.voiceNotesLoading?.classList.add('hidden');
+    
+    if (!voiceNotes || voiceNotes.length === 0) {
+      elements.voiceNotesEmpty?.classList.remove('hidden');
+      elements.voiceNotesTableContainer?.classList.add('hidden');
+      return;
+    }
+    
+    elements.voiceNotesEmpty?.classList.add('hidden');
+    elements.voiceNotesTableContainer?.classList.remove('hidden');
+    
+    elements.voiceNotesTableBody.innerHTML = '';
+    
+    voiceNotes.forEach(note => {
+      const row = document.createElement('tr');
+      
+      // Department
+      const deptCell = document.createElement('td');
+      deptCell.textContent = note.department || note.toDepartment || '-';
+      row.appendChild(deptCell);
+      
+      // Audio
+      const audioCell = document.createElement('td');
+      const audioElement = createAudioElement(note.audioBlob, note.audioMimeType);
+      if (audioElement) {
+        audioCell.appendChild(audioElement);
+      } else {
+        audioCell.textContent = '-';
+      }
+      row.appendChild(audioCell);
+      
+      // Summary
+      const summaryCell = document.createElement('td');
+      summaryCell.textContent = note.summary || '-';
+      summaryCell.style.maxWidth = '300px';
+      summaryCell.style.whiteSpace = 'normal';
+      summaryCell.style.wordWrap = 'break-word';
+      row.appendChild(summaryCell);
+      
+      // Created By
+      const createdByCell = document.createElement('td');
+      createdByCell.textContent = note.createdBy || '-';
+      row.appendChild(createdByCell);
+      
+      // Created At (IST)
+      const createdAtCell = document.createElement('td');
+      createdAtCell.textContent = formatDateToIST(note.createdAt);
+      row.appendChild(createdAtCell);
+      
+      elements.voiceNotesTableBody.appendChild(row);
+    });
+  }
+
+  // Handle voice notes button click
+  async function handleVoiceNotesClick() {
+    const jobNumber = state.currentJobCardNo;
+    
+    if (!jobNumber) {
+      alert('Job number not available');
+      return;
+    }
+    
+    openVoiceNotesModal();
+    
+    if (elements.voiceNotesModalTitle) {
+      elements.voiceNotesModalTitle.textContent = `Voice Notes - ${jobNumber}`;
+    }
+    
+    // Show loading state
+    elements.voiceNotesLoading?.classList.remove('hidden');
+    elements.voiceNotesEmpty?.classList.add('hidden');
+    elements.voiceNotesTableContainer?.classList.add('hidden');
+    
+    try {
+      const voiceNotes = await fetchVoiceNotes(jobNumber);
+      renderVoiceNotesTable(voiceNotes);
+    } catch (error) {
+      console.error('Error loading voice notes:', error);
+      elements.voiceNotesLoading?.classList.add('hidden');
+      elements.voiceNotesEmpty?.classList.remove('hidden');
+      elements.voiceNotesTableContainer?.classList.add('hidden');
     }
   }
 
@@ -1679,6 +1857,32 @@
       showMachineSelection();
     });
   }
+
+  // Voice Notes Modal event listeners
+  if (elements.voiceNotesBtn) {
+    elements.voiceNotesBtn.addEventListener('click', () => {
+      handleVoiceNotesClick();
+    });
+  }
+
+  if (elements.voiceNotesModalClose) {
+    elements.voiceNotesModalClose.addEventListener('click', closeVoiceNotesModal);
+  }
+
+  if (elements.voiceNotesModal) {
+    elements.voiceNotesModal.addEventListener('click', (event) => {
+      if (event.target === elements.voiceNotesModal) {
+        closeVoiceNotesModal();
+      }
+    });
+  }
+
+  // Handle Escape key to close modal
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && elements.voiceNotesModal && !elements.voiceNotesModal.classList.contains('hidden')) {
+      closeVoiceNotesModal();
+    }
+  });
 
   // Browser Navigation Handlers
   

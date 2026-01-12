@@ -1339,6 +1339,37 @@ button {
   to { transform: rotate(360deg); }
 }
 
+/* Instructions List Styles */
+.instructions-list {
+  margin-top: 1.5rem;
+}
+
+.instruction-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  transition: all 0.3s ease;
+}
+
+.instruction-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: var(--primary);
+}
+
+.instruction-card h4 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+  color: var(--text);
+}
+
+.instruction-card audio {
+  width: 100%;
+  margin-top: 0.75rem;
+}
+
 /* Modal Styles */
 .modal {
   position: fixed;

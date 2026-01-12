@@ -25,6 +25,7 @@
     displayedProcessCount: 10,
     qrScanner: null,
     currentScreen: 'login', // Track current screen for history management
+    instructionsSearchTimeout: null, // For debouncing job number search
   };
 
   // Session storage keys
@@ -40,6 +41,8 @@
     processListSection: document.getElementById('process-list-section'),
     runningProcessSection: document.getElementById('running-process-section'),
     runningMachinesSection: document.getElementById('running-machines-section'),
+    instructionsSearchSection: document.getElementById('instructions-search-section'),
+    instructionsResultsSection: document.getElementById('instructions-results-section'),
     
     // Login
     loginForm: document.getElementById('login-form'),
@@ -59,6 +62,21 @@
     // Running Machines
     runningMachinesList: document.getElementById('running-machines-list'),
     noRunningMachines: document.getElementById('no-running-machines'),
+    showInstructionsBtn: document.getElementById('btn-show-instructions'),
+    
+    // Instructions Search
+    instructionsManualEntryContainer: document.getElementById('instructions-manual-entry-container'),
+    instructionsJobNumberInput: document.getElementById('instructions-job-number'),
+    instructionsJobNumberDropdown: document.getElementById('instructions-job-number-dropdown'),
+    searchInstructionsBtn: document.getElementById('btn-search-instructions'),
+    backToRunningMachinesBtn: document.getElementById('btn-back-to-running-machines'),
+    
+    // Instructions Results
+    instructionsLoading: document.getElementById('instructions-loading'),
+    instructionsEmpty: document.getElementById('instructions-empty'),
+    instructionsList: document.getElementById('instructions-list'),
+    instructionsJobNumberDisplay: document.getElementById('instructions-job-number-display'),
+    backToInstructionsSearchBtn: document.getElementById('btn-back-to-instructions-search'),
     
     // Search
     tabQr: document.getElementById('tab-qr'),
@@ -665,6 +683,11 @@
   });
 
   function showSection(section, screenName = null) {
+    // Stop QR scanners when switching sections
+    if (section !== elements.searchSection) {
+      stopQrScanner();
+    }
+
     // Hide all sections
     Object.values(elements).forEach(el => {
       if (el && el.classList && (
@@ -673,7 +696,9 @@
         el.id === 'search-section' ||
         el.id === 'process-list-section' ||
         el.id === 'running-process-section' ||
-        el.id === 'running-machines-section'
+        el.id === 'running-machines-section' ||
+        el.id === 'instructions-search-section' ||
+        el.id === 'instructions-results-section'
       )) {
         el.classList.add('hidden');
       }
@@ -1795,6 +1820,138 @@
     }
   }
 
+  // Instructions Search Section
+  function showInstructionsSearchSection() {
+    showSection(elements.instructionsSearchSection, 'instructions-search');
+    // Clear the input field and dropdown when showing the section
+    if (elements.instructionsJobNumberInput) {
+      elements.instructionsJobNumberInput.value = '';
+      elements.instructionsJobNumberInput.focus();
+    }
+    if (elements.instructionsJobNumberDropdown) {
+      elements.instructionsJobNumberDropdown.style.display = 'none';
+    }
+    // Clear any pending search timeout
+    if (state.instructionsSearchTimeout) {
+      clearTimeout(state.instructionsSearchTimeout);
+      state.instructionsSearchTimeout = null;
+    }
+  }
+
+  async function searchInstructions(jobNumber) {
+    if (!jobNumber) {
+      alert('Please enter a job number');
+      return;
+    }
+
+    showSection(elements.instructionsResultsSection, 'instructions-results');
+    if (elements.instructionsJobNumberDisplay) {
+      elements.instructionsJobNumberDisplay.textContent = `Job Number: ${jobNumber}`;
+    }
+
+    // Show loading, hide empty and list
+    if (elements.instructionsLoading) elements.instructionsLoading.classList.remove('hidden');
+    if (elements.instructionsEmpty) elements.instructionsEmpty.classList.add('hidden');
+    if (elements.instructionsList) elements.instructionsList.innerHTML = '';
+
+    try {
+      // Call the API to get all recordings for this job number
+      const response = await fetch(`${API_BASE_URL}/voice-note-tool/audio/job/${encodeURIComponent(jobNumber)}/all`, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch instructions');
+      }
+
+      const recordings = await response.json();
+
+      if (elements.instructionsLoading) elements.instructionsLoading.classList.add('hidden');
+
+      if (!recordings || recordings.length === 0) {
+        if (elements.instructionsEmpty) elements.instructionsEmpty.classList.remove('hidden');
+        return;
+      }
+
+      if (elements.instructionsEmpty) elements.instructionsEmpty.classList.add('hidden');
+      renderInstructions(recordings);
+    } catch (error) {
+      console.error('Error fetching instructions:', error);
+      if (elements.instructionsLoading) elements.instructionsLoading.classList.add('hidden');
+      if (elements.instructionsEmpty) elements.instructionsEmpty.classList.remove('hidden');
+      alert('Error loading instructions: ' + error.message);
+    }
+  }
+
+  function renderInstructions(recordings) {
+    if (!elements.instructionsList) return;
+
+    elements.instructionsList.innerHTML = '';
+
+    recordings.forEach((recording, index) => {
+      const instructionCard = document.createElement('div');
+      instructionCard.className = 'instruction-card';
+      instructionCard.style.cssText = `
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+      `;
+
+      const date = new Date(recording.createdAt).toLocaleString();
+      const department = recording.department || recording.toDepartment || 'N/A';
+
+      instructionCard.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
+          <div>
+            <h4 style="margin: 0 0 0.5rem; font-size: 1.1rem; color: var(--text);">Instruction #${index + 1}</h4>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.875rem; color: var(--text-muted);">
+              <span><strong>Department:</strong> ${department}</span>
+              <span><strong>Created By:</strong> ${recording.createdBy || 'N/A'}</span>
+              <span><strong>Date:</strong> ${date}</span>
+            </div>
+          </div>
+        </div>
+        ${recording.summary ? `
+          <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(79, 70, 229, 0.1); border-radius: 8px; border-left: 3px solid var(--primary);">
+            <div style="font-weight: 600; margin-bottom: 0.5rem; color: var(--text);">Summary:</div>
+            <div style="white-space: pre-wrap; line-height: 1.6; color: var(--text);">${recording.summary}</div>
+          </div>
+        ` : ''}
+        ${recording.audioBlob ? `
+          <div style="margin-top: 0.75rem;">
+            <audio controls style="width: 100%;" data-audio-id="${recording._id}"></audio>
+          </div>
+        ` : ''}
+      `;
+
+      elements.instructionsList.appendChild(instructionCard);
+
+      // Load audio if available
+      if (recording.audioBlob) {
+        const audioElement = instructionCard.querySelector('audio');
+        if (audioElement) {
+          // Convert base64 to blob URL
+          try {
+            const binaryString = atob(recording.audioBlob);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            const blob = new Blob([bytes], { type: recording.audioMimeType || 'audio/wav' });
+            const url = URL.createObjectURL(blob);
+            audioElement.src = url;
+          } catch (err) {
+            console.error('Error loading audio:', err);
+          }
+        }
+      }
+    });
+  }
+
   // Running Process View
   function viewRunningProcess(process) {
     try {
@@ -2135,6 +2292,124 @@
     });
   }
 
+  // Instructions Search event listeners
+  if (elements.showInstructionsBtn) {
+    elements.showInstructionsBtn.addEventListener('click', () => {
+      showInstructionsSearchSection();
+    });
+  }
+
+  if (elements.backToRunningMachinesBtn) {
+    elements.backToRunningMachinesBtn.addEventListener('click', () => {
+      showRunningMachinesSection();
+    });
+  }
+
+  if (elements.backToInstructionsSearchBtn) {
+    elements.backToInstructionsSearchBtn.addEventListener('click', () => {
+      showInstructionsSearchSection();
+    });
+  }
+
+  if (elements.searchInstructionsBtn) {
+    elements.searchInstructionsBtn.addEventListener('click', () => {
+      if (elements.instructionsJobNumberDropdown) {
+        elements.instructionsJobNumberDropdown.style.display = 'none';
+      }
+      const jobNumber = elements.instructionsJobNumberInput.value.trim();
+      searchInstructions(jobNumber);
+    });
+  }
+
+  if (elements.instructionsJobNumberInput) {
+    // Handle job number input - search when 4+ digits entered
+    elements.instructionsJobNumberInput.addEventListener('input', async (e) => {
+      const value = e.target.value.trim();
+      
+      // Clear previous timeout
+      if (state.instructionsSearchTimeout) {
+        clearTimeout(state.instructionsSearchTimeout);
+      }
+
+      // Hide dropdown if less than 4 characters
+      if (value.length < 4) {
+        if (elements.instructionsJobNumberDropdown) {
+          elements.instructionsJobNumberDropdown.style.display = 'none';
+        }
+        return;
+      }
+
+      // Debounce search (wait 300ms after user stops typing)
+      state.instructionsSearchTimeout = setTimeout(async () => {
+        try {
+          console.log('🔍 [INSTRUCTIONS] Searching job numbers for:', value);
+          const jobNumbers = await apiRequest(`jobs/search-numbers-completion/${encodeURIComponent(value)}`);
+          console.log('🔍 [INSTRUCTIONS] Received jobNumbers:', jobNumbers);
+          
+          if (jobNumbers && Array.isArray(jobNumbers) && jobNumbers.length > 0) {
+            // Populate dropdown
+            if (elements.instructionsJobNumberDropdown) {
+              elements.instructionsJobNumberDropdown.innerHTML = '';
+              jobNumbers.forEach(jobNum => {
+                const item = document.createElement('div');
+                item.style.cssText = 'padding: 10px 14px; cursor: pointer; border-bottom: 1px solid rgba(55, 65, 81, 0.5); color: #f9fafb; font-size: 0.9rem;';
+                item.textContent = jobNum;
+                item.addEventListener('mouseenter', () => {
+                  item.style.backgroundColor = 'rgba(79, 70, 229, 0.3)';
+                });
+                item.addEventListener('mouseleave', () => {
+                  item.style.backgroundColor = 'transparent';
+                });
+                item.addEventListener('click', () => {
+                  if (elements.instructionsJobNumberInput) {
+                    elements.instructionsJobNumberInput.value = jobNum;
+                  }
+                  if (elements.instructionsJobNumberDropdown) {
+                    elements.instructionsJobNumberDropdown.style.display = 'none';
+                  }
+                });
+                elements.instructionsJobNumberDropdown.appendChild(item);
+              });
+              elements.instructionsJobNumberDropdown.style.display = 'block';
+              console.log('🔍 [INSTRUCTIONS] Dropdown populated with', jobNumbers.length, 'items');
+            }
+          } else {
+            console.log('🔍 [INSTRUCTIONS] No job numbers found or empty array');
+            if (elements.instructionsJobNumberDropdown) {
+              elements.instructionsJobNumberDropdown.style.display = 'none';
+            }
+          }
+        } catch (error) {
+          console.error('❌ [INSTRUCTIONS] Error searching job numbers:', error);
+          if (elements.instructionsJobNumberDropdown) {
+            elements.instructionsJobNumberDropdown.style.display = 'none';
+          }
+        }
+      }, 300);
+    });
+
+    // Handle Enter key
+    elements.instructionsJobNumberInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        if (elements.instructionsJobNumberDropdown) {
+          elements.instructionsJobNumberDropdown.style.display = 'none';
+        }
+        const jobNumber = elements.instructionsJobNumberInput.value.trim();
+        searchInstructions(jobNumber);
+      }
+    });
+
+    // Hide dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (elements.instructionsJobNumberInput && elements.instructionsJobNumberDropdown) {
+        if (!elements.instructionsJobNumberInput.contains(e.target) && 
+            !elements.instructionsJobNumberDropdown.contains(e.target)) {
+          elements.instructionsJobNumberDropdown.style.display = 'none';
+        }
+      }
+    });
+  }
+
   // Voice Notes Modal event listeners
   if (elements.voiceNotesBtn) {
     elements.voiceNotesBtn.addEventListener('click', () => {
@@ -2199,6 +2474,12 @@
         break;
       case 'running-machines':
         showRunningMachinesSection();
+        break;
+      case 'instructions-search':
+        showInstructionsSearchSection();
+        break;
+      case 'instructions-results':
+        // Keep current results visible
         break;
       default:
         showMachineSelection();

@@ -1242,6 +1242,16 @@ button {
     height: 18px;
   }
 
+  .section-actions {
+    margin-top: 1rem !important;
+    padding: 0 0.5rem !important;
+  }
+
+  .section-actions .btn-primary {
+    width: 100%;
+    min-width: auto !important;
+  }
+
   .voice-notes-modal-content {
     width: 95%;
     max-width: 95%;

@@ -2301,7 +2301,7 @@
 
   if (elements.backToRunningMachinesBtn) {
     elements.backToRunningMachinesBtn.addEventListener('click', () => {
-      showRunningMachinesSection();
+      showMachineSelection();
     });
   }
 

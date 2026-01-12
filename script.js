@@ -65,6 +65,9 @@
     showInstructionsBtn: document.getElementById('btn-show-instructions'),
     
     // Instructions Search
+    tabInstructionsQr: document.getElementById('tab-instructions-qr'),
+    tabInstructionsManual: document.getElementById('tab-instructions-manual'),
+    instructionsQrScannerContainer: document.getElementById('instructions-qr-scanner-container'),
     instructionsManualEntryContainer: document.getElementById('instructions-manual-entry-container'),
     instructionsJobNumberInput: document.getElementById('instructions-job-number'),
     instructionsJobNumberDropdown: document.getElementById('instructions-job-number-dropdown'),
@@ -1823,10 +1826,17 @@
   // Instructions Search Section
   function showInstructionsSearchSection() {
     showSection(elements.instructionsSearchSection, 'instructions-search');
+    // Start with QR scanner tab active
+    if (elements.tabInstructionsQr && elements.tabInstructionsManual) {
+      elements.tabInstructionsQr.classList.add('active');
+      elements.tabInstructionsManual.classList.remove('active');
+      elements.instructionsQrScannerContainer.classList.remove('hidden');
+      elements.instructionsManualEntryContainer.classList.add('hidden');
+      startInstructionsQrScanner();
+    }
     // Clear the input field and dropdown when showing the section
     if (elements.instructionsJobNumberInput) {
       elements.instructionsJobNumberInput.value = '';
-      elements.instructionsJobNumberInput.focus();
     }
     if (elements.instructionsJobNumberDropdown) {
       elements.instructionsJobNumberDropdown.style.display = 'none';
@@ -1835,6 +1845,76 @@
     if (state.instructionsSearchTimeout) {
       clearTimeout(state.instructionsSearchTimeout);
       state.instructionsSearchTimeout = null;
+    }
+  }
+
+  function startInstructionsQrScanner() {
+    if (!elements.instructionsQrScannerContainer || state.instructionsQrScanner) return;
+    
+    stopInstructionsQrScanner();
+    
+    try {
+      const scanner = new Html5Qrcode('instructions-qr-reader');
+      
+      scanner.start(
+        { facingMode: 'environment' },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 }
+        },
+        (decodedText) => {
+          handleInstructionsQrScan(decodedText);
+        },
+        (error) => {
+          // Ignore scan errors
+        }
+      ).then(() => {
+        // Scanner started successfully
+        state.instructionsQrScanner = scanner;
+      }).catch(err => {
+        console.error('Error starting instructions QR scanner:', err);
+        state.instructionsQrScanner = null;
+      });
+    } catch (err) {
+      console.error('Error initializing instructions QR scanner:', err);
+      state.instructionsQrScanner = null;
+    }
+  }
+
+  function stopInstructionsQrScanner() {
+    if (state.instructionsQrScanner) {
+      // Check if scanner is actually running before trying to stop
+      try {
+        const scannerState = state.instructionsQrScanner.getState();
+        if (scannerState === 2) { // 2 = SCANNING state
+          state.instructionsQrScanner.stop().catch(err => console.error('Error stopping instructions scanner:', err));
+        }
+      } catch (err) {
+        // If getState fails, try to stop anyway
+        state.instructionsQrScanner.stop().catch(() => {});
+      }
+      state.instructionsQrScanner = null;
+    }
+  }
+
+  function handleInstructionsQrScan(scannedText) {
+    stopInstructionsQrScanner();
+    
+    // Extract job number (everything before "[")
+    let jobNumber = scannedText.trim();
+    const bracketIndex = jobNumber.indexOf('[');
+    if (bracketIndex !== -1) {
+      jobNumber = jobNumber.substring(0, bracketIndex).trim();
+    }
+    
+    console.log('📱 [INSTRUCTIONS] QR scanned:', scannedText);
+    console.log('📱 [INSTRUCTIONS] Extracted job number:', jobNumber);
+    
+    // Automatically search with extracted job number
+    if (jobNumber) {
+      searchInstructions(jobNumber);
+    } else {
+      alert('Could not extract job number from scanned QR code');
     }
   }
 
@@ -2308,6 +2388,27 @@
   if (elements.backToInstructionsSearchBtn) {
     elements.backToInstructionsSearchBtn.addEventListener('click', () => {
       showInstructionsSearchSection();
+    });
+  }
+
+  // Instructions search tabs
+  if (elements.tabInstructionsQr) {
+    elements.tabInstructionsQr.addEventListener('click', () => {
+      elements.tabInstructionsQr.classList.add('active');
+      elements.tabInstructionsManual.classList.remove('active');
+      elements.instructionsQrScannerContainer.classList.remove('hidden');
+      elements.instructionsManualEntryContainer.classList.add('hidden');
+      startInstructionsQrScanner();
+    });
+  }
+
+  if (elements.tabInstructionsManual) {
+    elements.tabInstructionsManual.addEventListener('click', () => {
+      elements.tabInstructionsManual.classList.add('active');
+      elements.tabInstructionsQr.classList.remove('active');
+      elements.instructionsManualEntryContainer.classList.remove('hidden');
+      elements.instructionsQrScannerContainer.classList.add('hidden');
+      stopInstructionsQrScanner();
     });
   }
 

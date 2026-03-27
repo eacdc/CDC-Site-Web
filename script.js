@@ -2,7 +2,38 @@
   'use strict';
 
   // API Configuration
-  const API_BASE_URL = 'https://cdcapi.onrender.com/api';
+  // Default to deployed backend, but allow local backend when running frontend locally.
+  const PROD_API_BASE_URL = 'https://cdcapi.onrender.com/api';
+  const LOCAL_API_BASE_URL = 'http://localhost:3001/api';
+
+  function resolveApiBaseUrl() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+
+      // Highest priority: explicit override
+      const apiBase = params.get('apiBase') || params.get('api_base');
+      if (apiBase) return apiBase.replace(/\/$/, '');
+
+      // Priority: explicit environment flag
+      const apiEnv = (params.get('apiEnv') || '').toLowerCase();
+      if (apiEnv === 'local') return LOCAL_API_BASE_URL;
+      if (apiEnv === 'prod' || apiEnv === 'production') return PROD_API_BASE_URL;
+
+      // Next: if running on localhost, use local backend
+      const hostname = window.location.hostname || '';
+      const protocol = window.location.protocol || '';
+      if (hostname === 'localhost' || hostname === '127.0.0.1') return LOCAL_API_BASE_URL;
+
+      // If opening via file://, it's usually local development; default to local
+      if (protocol === 'file:') return LOCAL_API_BASE_URL;
+    } catch (e) {
+      // If anything goes wrong, fall back to prod.
+    }
+
+    return PROD_API_BASE_URL;
+  }
+
+  const API_BASE_URL = resolveApiBaseUrl();
 
   // Set current year in footer
   const yearElement = document.getElementById('year');

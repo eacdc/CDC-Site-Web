@@ -69,17 +69,25 @@
               <h2>Select Machine</h2>
               <p class="subtitle">Choose a machine to start production</p>
             </div>
-            <button id="btn-view-running-machines" class="btn-running-machines" title="View Running Machines">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M8 5v14l11-7z"/>
-              </svg>
-              Running Machines
-            </button>
+            <div class="machine-header-actions" style="display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;gap:0.65rem;flex-shrink:0;">
+              <a href="view-production.html" class="btn-view-production" id="btn-view-production" title="Search production by job card content" style="display:inline-flex;align-items:center;gap:0.5rem;white-space:nowrap;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:20px;height:20px;flex-shrink:0;">
+                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                </svg>
+                View Production
+              </a>
+              <button id="btn-view-running-machines" class="btn-running-machines" title="View Running Machines" style="display:inline-flex;align-items:center;gap:0.5rem;white-space:nowrap;flex-shrink:0;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width:20px;height:20px;flex-shrink:0;">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+                Running Machines
+              </button>
+            </div>
           </div>
         </div>
-        <div class="section-actions" style="margin-top: 1rem; text-align: center; padding: 0 1rem;">
-          <button id="btn-show-instructions" class="btn-primary" style="min-width: 200px;">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 20px; height: 20px; margin-right: 8px; vertical-align: middle;">
+        <div class="machine-instructions-row">
+          <button id="btn-show-instructions" type="button" class="btn-instructions">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
             </svg>
             Show Instructions
@@ -309,6 +317,27 @@
   <div id="loading-overlay" class="loading-overlay hidden">
     <div class="spinner"></div>
     <p>Loading...</p>
+  </div>
+
+  <!-- Admin PIN (required after successful DB login when username is admin) -->
+  <div id="admin-pin-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="admin-pin-title">
+    <div class="modal-content admin-pin-modal-content">
+      <div class="modal-header">
+        <h3 id="admin-pin-title">Administrator PIN</h3>
+      </div>
+      <div class="modal-body">
+        <p class="subtitle admin-pin-subtitle">Enter your PIN and click OK to continue.</p>
+        <div class="form-row">
+          <label for="admin-pin-input">PIN</label>
+          <input type="password" id="admin-pin-input" autocomplete="off" maxlength="32" />
+        </div>
+        <p id="admin-pin-error" class="error hidden" aria-live="polite"></p>
+        <div class="admin-pin-actions">
+          <button type="button" id="admin-pin-cancel" class="btn-secondary">Cancel</button>
+          <button type="button" id="admin-pin-ok" class="btn-primary">OK</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Voice Notes Modal -->

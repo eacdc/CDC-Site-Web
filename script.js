@@ -63,6 +63,9 @@
   const SESSION_KEY = 'cdc_session';
   const SESSION_ID_KEY = 'cdc_session_id';
 
+  /** Set after successful DB login for username "admin" until PIN is verified. */
+  let pendingAdminLogin = null;
+
   // DOM Elements
   const elements = {
     // Sections
@@ -88,6 +91,7 @@
     // Machines
     machinesList: document.getElementById('machines-list'),
     viewRunningMachinesBtn: document.getElementById('btn-view-running-machines'),
+    viewProductionLink: document.getElementById('btn-view-production'),
     backToMachinesFromRunningBtn: document.getElementById('btn-back-to-machines-from-running'),
     
     // Running Machines
@@ -151,6 +155,13 @@
     
     // Loading
     loadingOverlay: document.getElementById('loading-overlay'),
+
+    // Admin PIN modal
+    adminPinModal: document.getElementById('admin-pin-modal'),
+    adminPinInput: document.getElementById('admin-pin-input'),
+    adminPinError: document.getElementById('admin-pin-error'),
+    adminPinOk: document.getElementById('admin-pin-ok'),
+    adminPinCancel: document.getElementById('admin-pin-cancel'),
   };
 
   // Helper Functions
@@ -650,16 +661,119 @@
     return localStorage.getItem(SESSION_ID_KEY);
   }
 
+  function isAdminUsername(name) {
+    return String(name || '').trim().toLowerCase() === 'admin';
+  }
+
+  function openAdminPinModal() {
+    if (!elements.adminPinModal) return;
+    if (elements.adminPinError) {
+      elements.adminPinError.textContent = '';
+      elements.adminPinError.classList.add('hidden');
+    }
+    if (elements.adminPinInput) {
+      elements.adminPinInput.value = '';
+      elements.adminPinInput.focus();
+    }
+    elements.adminPinModal.classList.remove('hidden');
+  }
+
+  function closeAdminPinModal() {
+    elements.adminPinModal?.classList.add('hidden');
+    if (elements.adminPinInput) elements.adminPinInput.value = '';
+    if (elements.adminPinError) {
+      elements.adminPinError.textContent = '';
+      elements.adminPinError.classList.add('hidden');
+    }
+  }
+
+  function completeAdminLoginFromPending() {
+    if (!pendingAdminLogin) return;
+    const p = pendingAdminLogin;
+    pendingAdminLogin = null;
+    state.currentUsername = p.username;
+    state.currentUserId = p.userId;
+    state.currentLedgerId = p.ledgerId;
+    state.selectedDatabase = p.database;
+    state.machines = p.machines || [];
+    saveSession({
+      username: p.username,
+      userId: p.userId,
+      ledgerId: p.ledgerId,
+      database: p.database,
+      machines: p.machines || [],
+    });
+    closeAdminPinModal();
+    updateUserInfo();
+    showMachineSelection();
+  }
+
+  async function submitAdminPin() {
+    if (!pendingAdminLogin) return;
+    const pin = elements.adminPinInput?.value != null ? String(elements.adminPinInput.value).trim() : '';
+    if (!pin) {
+      if (elements.adminPinError) {
+        elements.adminPinError.textContent = 'Please enter your PIN.';
+        elements.adminPinError.classList.remove('hidden');
+      }
+      return;
+    }
+    if (elements.adminPinError) {
+      elements.adminPinError.textContent = '';
+      elements.adminPinError.classList.add('hidden');
+    }
+    showLoading();
+    try {
+      const data = await apiRequest('auth/admin-pin', {
+        method: 'POST',
+        body: JSON.stringify({ pin }),
+      });
+      if (data.status === true) {
+        completeAdminLoginFromPending();
+      } else if (elements.adminPinError) {
+        elements.adminPinError.textContent = data.error || 'Invalid PIN. Login denied.';
+        elements.adminPinError.classList.remove('hidden');
+      }
+    } catch (error) {
+      if (elements.adminPinError) {
+        elements.adminPinError.textContent = error.message || 'Request failed. Try again.';
+        elements.adminPinError.classList.remove('hidden');
+      }
+    } finally {
+      hideLoading();
+    }
+  }
+
+  function cancelAdminPin() {
+    pendingAdminLogin = null;
+    closeAdminPinModal();
+    clearSession();
+    showSection(elements.loginSection, 'login');
+  }
+
   function restoreSession() {
     const sessionData = loadSession();
     if (sessionData) {
+      if (isAdminUsername(sessionData.username)) {
+        pendingAdminLogin = {
+          username: sessionData.username,
+          userId: sessionData.userId,
+          ledgerId: sessionData.ledgerId,
+          database: sessionData.database,
+          machines: sessionData.machines || [],
+          fromRestore: true,
+        };
+        setTimeout(() => openAdminPinModal(), 0);
+        console.log('Admin session requires PIN before restore');
+        return true;
+      }
       // Restore state from session
       state.currentUsername = sessionData.username;
       state.currentUserId = sessionData.userId;
       state.currentLedgerId = sessionData.ledgerId;
       state.selectedDatabase = sessionData.database;
       state.machines = sessionData.machines || [];
-      
+
       updateUserInfo();
       showMachineSelection();
       console.log('Session restored for user:', sessionData.username);
@@ -813,6 +927,19 @@
       const data = await apiRequest(`auth/login?username=${encodeURIComponent(username)}&database=${encodeURIComponent(database)}&_t=${Date.now()}`);
       
       if (data.status === true) {
+        if (isAdminUsername(username)) {
+          pendingAdminLogin = {
+            username,
+            userId: data.userId,
+            ledgerId: data.ledgerId,
+            database,
+            machines: data.machines || [],
+            fromRestore: false,
+          };
+          setTimeout(() => openAdminPinModal(), 0);
+          return false;
+        }
+
         state.currentUsername = username;
         state.currentUserId = data.userId;
         state.currentLedgerId = data.ledgerId;
@@ -854,6 +981,9 @@
   }
 
   function logout() {
+    pendingAdminLogin = null;
+    closeAdminPinModal();
+
     state.currentUsername = null;
     state.currentUserId = null;
     state.currentLedgerId = null;
@@ -2340,6 +2470,21 @@
     });
   }
 
+  if (elements.adminPinOk) {
+    elements.adminPinOk.addEventListener('click', () => submitAdminPin());
+  }
+  if (elements.adminPinCancel) {
+    elements.adminPinCancel.addEventListener('click', () => cancelAdminPin());
+  }
+  if (elements.adminPinInput) {
+    elements.adminPinInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submitAdminPin();
+      }
+    });
+  }
+
   if (elements.logoutBtn) {
     elements.logoutBtn.addEventListener('click', logout);
   }
@@ -2389,6 +2534,11 @@
       state.displayedProcessCount += 10;
       renderProcessList();
     });
+  }
+
+  if (elements.viewProductionLink) {
+    const qs = window.location.search || '';
+    elements.viewProductionLink.href = 'view-production.html' + qs;
   }
 
   if (elements.viewRunningMachinesBtn) {
@@ -2636,9 +2786,11 @@
   
   // Try to restore session from localStorage
   const sessionRestored = restoreSession();
-  
-  // If no session, show login screen
+
+  // If no session, show login screen; admin restore stays on login until PIN is verified
   if (!sessionRestored) {
+    showSection(elements.loginSection, 'login');
+  } else if (pendingAdminLogin && pendingAdminLogin.fromRestore) {
     showSection(elements.loginSection, 'login');
   }
 })();

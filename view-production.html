@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>View Production — CDC Process Management</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app" class="production-layout">
+    <header class="app-header">
+      <div class="header-content">
+        <div class="header-left">
+          <div class="logo-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/>
+            </svg>
+          </div>
+          <h1 class="production-page-title">View Production</h1>
+        </div>
+        <div class="header-right">
+          <span id="user-info" class="user-info hidden"></span>
+          <a href="index.html" id="link-back-home" class="btn-production-back">Back to app</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="production-page-main">
+      <div class="production-page-toolbar">
+        <div class="production-search-panel">
+          <form id="production-search-form" class="production-search-form" action="#" method="get">
+            <div>
+              <label for="job-card-search-input">Job card content no.</label>
+              <input
+                id="job-card-search-input"
+                name="searchText"
+                type="text"
+                autocomplete="off"
+                placeholder="Min. 4 characters"
+                minlength="4"
+                maxlength="100"
+                required
+              />
+            </div>
+            <div>
+              <label class="visually-hidden" for="production-search-submit">Search</label>
+              <button type="submit" id="production-search-submit" class="btn-search-production">Search</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <p id="production-message" class="production-error hidden" role="alert"></p>
+      <div id="production-results-wrap" class="production-results-wrap hidden">
+        <div class="production-results-scroll">
+          <table class="production-results-table" id="production-results-table">
+            <thead>
+              <tr>
+                <th>UserName</th>
+                <th>FormNo</th>
+                <th>ProcessName</th>
+                <th>ClientName</th>
+                <th>JobName</th>
+                <th>ScheduledQty</th>
+                <th>ProductionQty</th>
+                <th>Status</th>
+                <th>MachineName</th>
+                <th class="production-col-actions" scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="production-results-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="production-empty" class="production-empty hidden">No rows returned. Try a different search.</div>
+    </main>
+  </div>
+  <script src="view-production.js"></script>
+</body>
+</html>

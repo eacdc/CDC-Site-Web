@@ -2016,6 +2016,496 @@ button {
   cursor: not-allowed;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   Machine Wise Production — button (index page)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.btn-machine-production {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.35rem;
+  background: linear-gradient(135deg, #0d9488, #0f766e);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.35);
+  white-space: nowrap;
+  text-decoration: none;
+  font-size: 0.9375rem;
+  font-family: inherit;
+}
+
+.btn-machine-production:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(13, 148, 136, 0.48);
+  color: white;
+}
+
+.btn-machine-production svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Machine Wise Production — page layout
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.mwp-layout {
+  width: 100%;
+  max-width: 100%;
+}
+
+.mwp-layout .header-content {
+  max-width: 100%;
+  padding-left: clamp(12px, 2vw, 24px);
+  padding-right: clamp(12px, 2vw, 24px);
+}
+
+.mwp-page-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.mwp-page-main {
+  width: 100%;
+  padding: 1rem clamp(10px, 1.5vw, 20px) 2.5rem;
+  flex: 1;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ── Toolbar ──────────────────────────────────────────────────────────── */
+
+.mwp-toolbar {
+  flex-shrink: 0;
+}
+
+.mwp-search-panel {
+  background: radial-gradient(1000px 120px at 0% 0%, rgba(13, 148, 136, 0.10), transparent 50%), var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1rem 1.15rem;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
+}
+
+.mwp-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1rem;
+}
+
+.mwp-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.mwp-form-field label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.mwp-date-input-wrap {
+  position: relative;
+}
+
+.mwp-form-field input[type="date"],
+.mwp-form-field select {
+  padding: 0.68rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #0b1020;
+  color: var(--text);
+  font-size: 0.9375rem;
+  font-family: inherit;
+  min-width: 150px;
+}
+
+.mwp-form-field input[type="date"] {
+  width: 100%;
+  padding-right: 2.35rem;
+}
+
+.mwp-date-input-wrap input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+}
+
+.mwp-date-picker-btn {
+  position: absolute;
+  top: 50%;
+  right: 0.55rem;
+  transform: translateY(-50%);
+  width: 1.45rem;
+  height: 1.45rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #6ee7d8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.mwp-date-picker-btn:hover {
+  background: rgba(13, 148, 136, 0.18);
+  color: #99f6e4;
+}
+
+.mwp-date-picker-btn:focus-visible {
+  outline: 2px solid rgba(13, 148, 136, 0.5);
+  outline-offset: 1px;
+}
+
+.mwp-date-picker-btn svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.mwp-form-field input[type="date"]:focus,
+.mwp-form-field select:focus {
+  outline: none;
+  border-color: #0d9488;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.2);
+}
+
+.mwp-form-field--machine select {
+  min-width: 200px;
+  max-width: 320px;
+}
+
+.mwp-form-field--btn {
+  justify-content: flex-end;
+}
+
+.btn-mwp-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.68rem 1.35rem;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #0d9488, #0f766e);
+  color: white;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.35);
+}
+
+.btn-mwp-search:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(13, 148, 136, 0.48);
+}
+
+.btn-mwp-search:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ── Status bar ───────────────────────────────────────────────────────── */
+
+.mwp-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+.mwp-row-count {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.mwp-filter-count {
+  font-size: 0.82rem;
+  color: #0d9488;
+  font-weight: 500;
+}
+
+/* ── Messages ─────────────────────────────────────────────────────────── */
+
+.mwp-message {
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.mwp-message--error {
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.mwp-message--info {
+  color: var(--text-muted);
+}
+
+/* ── Loading ──────────────────────────────────────────────────────────── */
+
+.mwp-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 3rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ── Results table wrapper ────────────────────────────────────────────── */
+
+.mwp-results-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mwp-table-container {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: calc(100vh - 270px);
+  min-height: 300px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+  width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Table ────────────────────────────────────────────────────────────── */
+
+.mwp-table {
+  table-layout: fixed;
+  width: 100%;
+  border-collapse: collapse;
+  line-height: 1.4;
+}
+
+/* Column widths (desktop) */
+.mwp-table th:nth-child(1), .mwp-table td:nth-child(1) { width: 10%; } /* ProductionDate */
+.mwp-table th:nth-child(2), .mwp-table td:nth-child(2) { width: 7%;  } /* UserName */
+.mwp-table th:nth-child(3), .mwp-table td:nth-child(3) { width: 9%;  } /* FormNo */
+.mwp-table th:nth-child(4), .mwp-table td:nth-child(4) { width: 10%; } /* JobCardContentNo */
+.mwp-table th:nth-child(5), .mwp-table td:nth-child(5) { width: 11%; } /* ProcessName */
+.mwp-table th:nth-child(6), .mwp-table td:nth-child(6) { width: 12%; } /* ClientName */
+.mwp-table th:nth-child(7), .mwp-table td:nth-child(7) { width: 23%; } /* JobName */
+.mwp-table th:nth-child(8), .mwp-table td:nth-child(8) { width: 7%;  } /* ScheduledQty */
+.mwp-table th:nth-child(9), .mwp-table td:nth-child(9) { width: 6%;  } /* ProductionQty */
+.mwp-table th:nth-child(10), .mwp-table td:nth-child(10) { width: 5%; } /* Status */
+
+/* Sticky header rows */
+.mwp-thead-labels th,
+.mwp-thead-filters th {
+  position: sticky;
+  z-index: 2;
+  background: #1a2540;
+}
+
+.mwp-thead-labels th {
+  top: 0;
+  padding: 0.55rem 0.5rem 0.3rem;
+  font-size: clamp(0.72rem, 0.78rem + 0.2vw, 0.875rem);
+  font-weight: 700;
+  color: var(--text);
+  text-align: left;
+  letter-spacing: 0.02em;
+  background: linear-gradient(180deg, rgba(13, 148, 136, 0.22), rgba(13, 148, 136, 0.10));
+  border-bottom: 1px solid rgba(13, 148, 136, 0.3);
+  white-space: nowrap;
+}
+
+.mwp-thead-filters th {
+  top: 37px; /* height of label row */
+  padding: 0.25rem 0.4rem 0.4rem;
+  background: rgba(15, 23, 42, 0.98);
+  border-bottom: 2px solid var(--border);
+}
+
+.mwp-col-filter {
+  width: 100%;
+  padding: 0.3rem 0.45rem;
+  border-radius: 6px;
+  border: 1px solid rgba(13, 148, 136, 0.3);
+  background: rgba(13, 148, 136, 0.06);
+  color: var(--text);
+  font-size: 0.75rem;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.mwp-col-filter:focus {
+  outline: none;
+  border-color: #0d9488;
+  box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.2);
+}
+
+.mwp-col-filter::placeholder {
+  color: rgba(148, 163, 184, 0.5);
+}
+
+/* Table cells */
+.mwp-table td {
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  font-size: clamp(0.7rem, 0.74rem + 0.15vw, 0.8125rem);
+  color: var(--text);
+  vertical-align: top;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.mwp-col-num {
+  text-align: right !important;
+}
+
+.mwp-table td[data-col="7"],
+.mwp-table td[data-col="8"] {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.mwp-table tbody tr:hover {
+  background: rgba(148, 163, 184, 0.07);
+}
+
+.mwp-row-hidden {
+  display: none !important;
+}
+
+/* ── Status badges ────────────────────────────────────────────────────── */
+
+.mwp-status-badge {
+  display: inline-block;
+  padding: 0.18rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.mwp-status-complete {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.mwp-status-running {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.mwp-status-pending {
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.mwp-status-other {
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--text-muted);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+/* ── Empty state ──────────────────────────────────────────────────────── */
+
+.mwp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 4rem 2rem;
+  color: var(--text-muted);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.mwp-empty svg {
+  width: 48px;
+  height: 48px;
+  opacity: 0.4;
+}
+
+.mwp-empty h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.mwp-empty p {
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  /* --- Machine Wise Production table: horizontal scroll on mobile --- */
+  .mwp-table-container {
+    overflow-x: auto !important;
+    height: calc(100vh - 320px);
+  }
+
+  .mwp-table {
+    table-layout: auto !important;
+    width: auto !important;
+    min-width: 900px;
+  }
+
+  .mwp-table th,
+  .mwp-table td {
+    white-space: nowrap !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+    width: auto !important;
+    padding: 0.4rem 0.5rem;
+  }
+
+  .mwp-thead-filters th {
+    top: 34px;
+  }
+
+  .mwp-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mwp-form-field input[type="date"],
+  .mwp-form-field select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .mwp-form-field--machine select {
+    max-width: 100%;
+  }
+
+  .btn-mwp-search {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 @media (max-width: 720px) {
   /* --- View Production table: horizontal scroll on mobile --- */
   .production-results-scroll {
@@ -2056,6 +2546,7 @@ button {
   }
 
   .machine-header-actions .btn-view-production,
+  .machine-header-actions .btn-machine-production,
   .machine-header-actions .btn-running-machines {
     width: 100% !important;
     justify-content: center !important;
@@ -2065,6 +2556,7 @@ button {
   }
 
   .machine-header-actions .btn-view-production svg,
+  .machine-header-actions .btn-machine-production svg,
   .machine-header-actions .btn-running-machines svg {
     width: 18px !important;
     height: 18px !important;

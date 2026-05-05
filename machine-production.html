@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Machine Wise Production — CDC Process Management</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app" class="mwp-layout">
+    <header class="app-header">
+      <div class="header-content">
+        <div class="header-left">
+          <div class="logo-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/>
+            </svg>
+          </div>
+          <h1 class="mwp-page-title">Machine Wise Production</h1>
+        </div>
+        <div class="header-right">
+          <span id="user-info" class="user-info hidden"></span>
+          <a href="index.html" id="link-back-home" class="btn-production-back">Back to app</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="mwp-page-main">
+      <!-- Search toolbar -->
+      <div class="mwp-toolbar">
+        <div class="mwp-search-panel">
+          <form id="mwp-form" class="mwp-form" autocomplete="off">
+            <div class="mwp-form-field">
+              <label for="mwp-start-date">Start Date</label>
+              <div class="mwp-date-input-wrap">
+                <input id="mwp-start-date" type="date" required />
+                <button
+                  type="button"
+                  class="mwp-date-picker-btn"
+                  data-target-input="mwp-start-date"
+                  aria-label="Open start date calendar"
+                  title="Open calendar"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM7 12h5v5H7z"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="mwp-form-field">
+              <label for="mwp-end-date">End Date</label>
+              <div class="mwp-date-input-wrap">
+                <input id="mwp-end-date" type="date" required />
+                <button
+                  type="button"
+                  class="mwp-date-picker-btn"
+                  data-target-input="mwp-end-date"
+                  aria-label="Open end date calendar"
+                  title="Open calendar"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM7 12h5v5H7z"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="mwp-form-field mwp-form-field--machine">
+              <label for="mwp-machine">Machine</label>
+              <select id="mwp-machine" required>
+                <option value="">Select machine…</option>
+              </select>
+            </div>
+            <div class="mwp-form-field mwp-form-field--btn">
+              <label class="visually-hidden" for="mwp-submit">Fetch</label>
+              <button type="submit" id="mwp-submit" class="btn-mwp-search">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:18px;height:18px;flex-shrink:0;">
+                  <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"/>
+                </svg>
+                Fetch
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Status bar -->
+      <div id="mwp-status-bar" class="mwp-status-bar hidden">
+        <span id="mwp-row-count" class="mwp-row-count"></span>
+        <span id="mwp-filter-count" class="mwp-filter-count hidden"></span>
+      </div>
+
+      <!-- Error / info message -->
+      <p id="mwp-message" class="mwp-message hidden" role="alert"></p>
+
+      <!-- Loading state -->
+      <div id="mwp-loading" class="mwp-loading hidden">
+        <div class="spinner"></div>
+        <p>Loading production data…</p>
+      </div>
+
+      <!-- Results table -->
+      <div id="mwp-results-wrap" class="mwp-results-wrap hidden">
+        <div class="mwp-table-container" id="mwp-table-container">
+          <table class="mwp-table" id="mwp-table">
+            <thead>
+              <tr class="mwp-thead-labels">
+                <th scope="col">Production Date</th>
+                <th scope="col">User</th>
+                <th scope="col">Form No</th>
+                <th scope="col">Job Card Content No</th>
+                <th scope="col">Process</th>
+                <th scope="col">Client</th>
+                <th scope="col">Job Name</th>
+                <th scope="col" class="mwp-col-num">Sched. Qty</th>
+                <th scope="col" class="mwp-col-num">Prod. Qty</th>
+                <th scope="col">Status</th>
+              </tr>
+              <tr class="mwp-thead-filters">
+                <th><input class="mwp-col-filter" type="text" data-col="0" placeholder="Filter…" aria-label="Filter Production Date" /></th>
+                <th><input class="mwp-col-filter" type="text" data-col="1" placeholder="Filter…" aria-label="Filter User" /></th>
+                <th><input class="mwp-col-filter" type="text" data-col="2" placeholder="Filter…" aria-label="Filter Form No" /></th>
+                <th><input class="mwp-col-filter" type="text" data-col="3" placeholder="Filter…" aria-label="Filter Job Card Content No" /></th>
+                <th><input class="mwp-col-filter" type="text" data-col="4" placeholder="Filter…" aria-label="Filter Process" /></th>
+                <th><input class="mwp-col-filter" type="text" data-col="5" placeholder="Filter…" aria-label="Filter Client" /></th>
+                <th><input class="mwp-col-filter" type="text" data-col="6" placeholder="Filter…" aria-label="Filter Job Name" /></th>
+                <th><input class="mwp-col-filter" type="text" data-col="7" placeholder="Filter…" aria-label="Filter Sched. Qty" /></th>
+                <th><input class="mwp-col-filter" type="text" data-col="8" placeholder="Filter…" aria-label="Filter Prod. Qty" /></th>
+                <th><input class="mwp-col-filter" type="text" data-col="9" placeholder="Filter…" aria-label="Filter Status" /></th>
+              </tr>
+            </thead>
+            <tbody id="mwp-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Empty state -->
+      <div id="mwp-empty" class="mwp-empty hidden">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/>
+        </svg>
+        <h3>No Data Found</h3>
+        <p>No production records for this machine and date range.</p>
+      </div>
+    </main>
+  </div>
+
+  <script src="machine-production.js"></script>
+</body>
+</html>

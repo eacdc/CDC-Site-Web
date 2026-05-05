@@ -109,22 +109,6 @@
     });
   });
 
-  // Populate machine dropdown
-  const machines = (session.machines || []).slice().sort((a, b) => {
-    const na = (a.machineName || a.MachineName || '').toLowerCase();
-    const nb = (b.machineName || b.MachineName || '').toLowerCase();
-    return na < nb ? -1 : na > nb ? 1 : 0;
-  });
-
-  machines.forEach((m) => {
-    const id = m.machineId || m.MachineID || '';
-    const name = m.machineName || m.MachineName || `Machine ${id}`;
-    const opt = document.createElement('option');
-    opt.value = String(id);
-    opt.textContent = name;
-    machineSelect.appendChild(opt);
-  });
-
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   function formatDateInput(d) {
@@ -284,6 +268,36 @@
     return Array.isArray(data.rows) ? data.rows : [];
   }
 
+  async function loadMachineDropdown() {
+    if (!machineSelect) return;
+    machineSelect.disabled = true;
+    const database = String(session.database || '').toUpperCase();
+    const q = new URLSearchParams({ database });
+    const url = `${API_BASE_URL}/machines/master-list?${q.toString()}`;
+    const res = await fetch(url, {
+      method: 'GET',
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+    if (!data.status) throw new Error(data.error || 'Failed to load machine list');
+
+    const rows = Array.isArray(data.rows) ? data.rows : [];
+    machineSelect.innerHTML = '<option value="">Select machine…</option>';
+
+    rows.forEach((m) => {
+      const id = m.MachineId ?? m.machineid ?? m.MachineID ?? m.machineId;
+      const name = m.MachineName ?? m.machinename ?? '';
+      if (!id) return;
+      const opt = document.createElement('option');
+      opt.value = String(id);
+      opt.textContent = name || `Machine ${id}`;
+      machineSelect.appendChild(opt);
+    });
+    machineSelect.disabled = false;
+  }
+
   // ── Form submit ───────────────────────────────────────────────────────────
 
   form.addEventListener('submit', async (e) => {
@@ -325,4 +339,15 @@
       setLoading(false);
     }
   });
+
+  (async function initMachines() {
+    try {
+      showMessage('Loading machine list...', false);
+      await loadMachineDropdown();
+      showMessage('', false);
+    } catch (err) {
+      console.error(err);
+      showMessage(err.message || 'Failed to load machine list', true);
+    }
+  })();
 })();
